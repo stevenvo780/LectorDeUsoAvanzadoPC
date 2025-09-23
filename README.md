@@ -1,6 +1,48 @@
-# Mission Center Clone para Linux
+# Mission Center Clone - Monitor de Sistema
 
-Aplicación de monitoreo de recursos inspirada en el Mission Center de Windows 11. Proporciona panel general, vista de procesos y secciones de rendimiento para CPU, memoria, GPU, almacenamiento, red, IO y enlaces PCIe, añadiendo métricas adicionales específicas para Linux.
+Monitor avanzado del sistema estilo Windows con interfaz web moderna y datos en tiempo real.
+
+## 🚀 **Ejecución Rápida**
+```bash
+python3 mission_center_advanced.py
+```
+Después abre: **http://localhost:8081**
+
+## ✨ **Características**
+- **🔥 CPU**: Gráficos por núcleo individual con frecuencias
+- **💾 Memoria**: RAM + Swap con historial en tiempo real  
+- **💽 Almacenamiento**: Velocidades E/S por dispositivo
+- **🌐 Red**: Interfaces activas con subida/bajada
+- **📊 Procesos**: Lista ordenada por uso de CPU
+- **🎮 Hardware**: GPU, PCIe, estadísticas avanzadas
+- **📈 Gráficos**: Historia de 60 segundos con Chart.js
+
+## 🎯 **Interfaz Estilo Windows**
+- Sidebar con 4 secciones principales
+- Diseño idéntico al Mission Center de Windows
+- Actualización automática cada segundo
+- Responsive design y colores modernos
+
+## 📦 **Requisitos**
+```bash
+pip install -r requirements.txt
+```
+
+## 📁 **Estructura**
+```
+mission_center_clone/         # Paquete Python con colectores
+mission_center_advanced.py    # Servidor web + interfaz completa
+requirements.txt              # Dependencias mínimas
+docs/                         # Documentación técnica
+```
+
+## 🔧 **Arquitectura**
+- **Backend**: HTTP server con colectores de datos
+- **Frontend**: HTML5 + CSS3 + JavaScript + Chart.js
+- **Datos**: psutil + pynvml + pyudev para máxima cobertura
+
+## 🌐 **Acceso**
+Una vez ejecutado, accede a **http://localhost:8081** para ver la interfaz completa estilo Windows con monitoreo en tiempo real del sistema.
 
 ## Características
 - **Panel general** con tarjetas en tiempo real para los recursos clave del sistema.
