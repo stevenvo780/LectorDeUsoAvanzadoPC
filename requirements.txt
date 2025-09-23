@@ -1,0 +1,8 @@
+# Dependencias base para ejecutar la aplicación
+psutil
+PySide6
+PySide6-Addons
+
+# Opcionales (no requeridos para arrancar)
+# pynvml    # métricas GPU NVIDIA
+# pyudev    # métricas PCIe vía udev

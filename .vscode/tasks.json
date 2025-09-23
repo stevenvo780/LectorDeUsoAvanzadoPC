@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Mission Center Clone",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "mission_center_clone.app"],
+      "options": {
+        "env": {
+          "QT_QPA_PLATFORM": "xcb"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run headless (3s)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["scripts/run_headless.py"],
+      "options": {
+        "env": {
+          "QT_QPA_PLATFORM": "offscreen"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Smoke test (headless)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["scripts/smoke.py"],
+      "options": {
+        "env": {
+          "QT_QPA_PLATFORM": "offscreen"
+        }
+      },
+      "problemMatcher": []
+    }
+  ]
+}
