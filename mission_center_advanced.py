@@ -361,28 +361,103 @@ class MissionCenterHandler(SimpleHTTPRequestHandler):
             margin-top: 15px;
         }
         
-        .cores-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 8px;
-            margin-top: 15px;
-        }
-        
-        .core-item {
-            background: rgba(34, 211, 238, 0.05);
-            border: 1px solid rgba(34, 211, 238, 0.2);
-            border-radius: 6px;
-            padding: 8px;
-            text-align: center;
-        }
-        
-        .core-usage {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #22d3ee;
-        }
-        
-        .process-table {
+            .cores-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+            .core-item {
+                background: #2a2a2a;
+                padding: 15px;
+                border-radius: 8px;
+                text-align: center;
+                border: 1px solid #333;
+                transition: all 0.3s ease;
+                position: relative;
+                min-height: 120px;
+            }
+
+            .core-item:hover {
+                background: #333;
+                transform: translateY(-2px);
+            }
+
+            .core-usage {
+                font-size: 20px;
+                font-weight: bold;
+                color: #0078d4;
+                margin-bottom: 5px;
+            }
+
+            .core-label {
+                font-size: 11px;
+                color: #999;
+                margin-bottom: 8px;
+            }
+
+            .core-freq {
+                font-size: 10px;
+                color: #ccc;
+                margin-bottom: 8px;
+            }
+
+            .core-mini-chart {
+                width: 100%;
+                height: 40px;
+                margin-top: 8px;
+            }
+
+            .metric-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+
+            .disk-item {
+                background: #2a2a2a;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid #333;
+            }
+
+            .disk-name {
+                font-weight: bold;
+                color: #0078d4;
+                margin-bottom: 10px;
+            }
+
+            .disk-metrics {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .disk-io {
+                text-align: center;
+            }
+
+            .disk-io-value {
+                font-size: 18px;
+                font-weight: bold;
+                color: #fff;
+            }
+
+            .disk-io-label {
+                font-size: 11px;
+                color: #999;
+                margin-top: 2px;
+            }
+
+            .read-speed {
+                color: #4caf50;
+            }
+
+            .write-speed {
+                color: #ff9800;
+            }        .process-table {
             background: rgba(17, 24, 39, 0.8);
             border-radius: 12px;
             border: 1px solid rgba(34, 211, 238, 0.3);
@@ -552,13 +627,37 @@ class MissionCenterHandler(SimpleHTTPRequestHandler):
         
         <!-- Sección Rendimiento -->
         <div id="performance-section" class="hidden">
+            <!-- CPU por Núcleo -->
             <div class="card full-width">
-                <h3>🔥 CPU por Núcleo</h3>
+                <h3>🔥 CPU por Núcleo - Vista Individual</h3>
                 <div class="cores-grid" id="cpu-cores-grid">
                     <!-- Núcleos generados dinámicamente -->
                 </div>
+                <h4 style="color: #0078d4; margin: 20px 0 10px 0; text-align: center;">📊 Gráfico de Todos los Núcleos en Tiempo Real</h4>
                 <div class="chart-container">
                     <canvas id="coresChart"></canvas>
+                </div>
+            </div>
+
+            <!-- I/O de Discos -->
+            <div class="card full-width">
+                <h3>💽 Actividad de Discos en Tiempo Real</h3>
+                <div id="disk-io-grid" class="metric-grid">
+                    <!-- Dispositivos generados dinámicamente -->
+                </div>
+                <div class="dashboard">
+                    <div class="card">
+                        <h3>📈 Lectura de Discos</h3>
+                        <div class="chart-container">
+                            <canvas id="diskReadChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>📈 Escritura de Discos</h3>
+                        <div class="chart-container">
+                            <canvas id="diskWriteChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -609,7 +708,139 @@ class MissionCenterHandler(SimpleHTTPRequestHandler):
     <script>
         // Variables globales
         let charts = {};
+        let miniCharts = {}; // Para los mini-gráficos de cada núcleo
         let currentSection = 'overview';
+        let coreHistory = {}; // Historial de datos para cada núcleo
+
+        // Configuración base para gráficos
+        const chartConfig = {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false,
+                        ticks: { color: '#999' },
+                        grid: { color: '#333' }
+                    },
+                    y: {
+                        ticks: { color: '#999' },
+                        grid: { color: '#333' },
+                        min: 0,
+                        max: 100
+                    }
+                }
+            }
+        };
+
+        // Configuración para gráficos de I/O (sin límite de 100%)
+        const ioChartConfig = {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false,
+                        ticks: { color: '#999' },
+                        grid: { color: '#333' }
+                    },
+                    y: {
+                        ticks: { color: '#999' },
+                        grid: { color: '#333' },
+                        min: 0
+                    }
+                }
+            }
+        };
+        
+        // Configuración para mini-gráficos de núcleos
+        const miniChartConfig = {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false
+                    },
+                    y: {
+                        display: false,
+                        min: 0,
+                        max: 100
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 0
+                    },
+                    line: {
+                        tension: 0.3,
+                        borderWidth: 1
+                    }
+                },
+                animation: false
+            }
+        };
+        
+        // Funciones para mini-gráficos de núcleos
+        function createMiniChart(coreId) {
+            const canvas = document.getElementById(`core-mini-chart-${coreId}`);
+            if (!canvas) return null;
+            
+            const ctx = canvas.getContext('2d');
+            
+            const config = {
+                ...miniChartConfig,
+                data: {
+                    labels: Array(30).fill(''), // 30 puntos de datos
+                    datasets: [{
+                        data: Array(30).fill(0),
+                        borderColor: `hsl(${coreId * 360 / 32}, 70%, 60%)`,
+                        backgroundColor: `hsl(${coreId * 360 / 32}, 70%, 60%, 0.1)`,
+                        fill: true
+                    }]
+                }
+            };
+            
+            return new Chart(ctx, config);
+        }
+        
+        function updateMiniChart(coreId, usage) {
+            if (!coreHistory[coreId]) {
+                coreHistory[coreId] = Array(30).fill(0);
+            }
+            
+            // Agregar nuevo dato y remover el más antiguo
+            coreHistory[coreId].shift();
+            coreHistory[coreId].push(usage);
+            
+            // Actualizar mini-gráfico si existe
+            if (miniCharts[coreId]) {
+                miniCharts[coreId].data.datasets[0].data = [...coreHistory[coreId]];
+                miniCharts[coreId].update('none');
+            }
+        }
         
         // Utilidades
         function formatBytes(bytes) {
@@ -753,6 +984,84 @@ class MissionCenterHandler(SimpleHTTPRequestHandler):
                     ]
                 }
             });
+
+            // Cores Chart - Gráfico individual de todos los núcleos
+            charts.cores = new Chart(document.getElementById('coresChart'), {
+                type: 'line',
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#fff',
+                                font: { size: 10 },
+                                boxWidth: 12,
+                                maxHeight: 100
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false,
+                            ticks: { color: '#999' },
+                            grid: { color: '#333' }
+                        },
+                        y: {
+                            ticks: { color: '#999' },
+                            grid: { color: '#333' },
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                },
+                data: {
+                    labels: Array(60).fill(''),
+                    datasets: Array(32).fill(0).map((_, i) => ({
+                        label: `Núcleo ${i}`,
+                        data: Array(60).fill(0),
+                        borderColor: `hsl(${i * 11.25}, 70%, ${50 + (i % 2) * 20}%)`,
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.5,
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 3,
+                        tension: 0.3
+                    }))
+                }
+            });
+
+            // Disk Read Chart
+            charts.diskRead = new Chart(document.getElementById('diskReadChart'), {
+                ...ioChartConfig,
+                data: {
+                    labels: Array(60).fill(''),
+                    datasets: [{
+                        label: 'Lectura total',
+                        data: Array(60).fill(0),
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true
+                    }]
+                }
+            });
+
+            // Disk Write Chart
+            charts.diskWrite = new Chart(document.getElementById('diskWriteChart'), {
+                ...ioChartConfig,
+                data: {
+                    labels: Array(60).fill(''),
+                    datasets: [{
+                        label: 'Escritura total',
+                        data: Array(60).fill(0),
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: true
+                    }]
+                }
+            });
         }
         
         // Actualizar datos
@@ -822,15 +1131,77 @@ class MissionCenterHandler(SimpleHTTPRequestHandler):
             const coresGrid = document.getElementById('cpu-cores-grid');
             coresGrid.innerHTML = '';
             
-            data.cpu.cores.forEach(core => {
+            data.cpu.cores.forEach((core, index) => {
                 const coreDiv = document.createElement('div');
                 coreDiv.className = 'core-item';
                 coreDiv.innerHTML = `
-                    <div>Núcleo ${core.id}</div>
+                    <div class="core-label">Núcleo ${core.id}</div>
                     <div class="core-usage">${core.usage.toFixed(1)}%</div>
-                    <div style="font-size: 0.8em; color: #94a3b8;">${core.frequency.toFixed(0)} MHz</div>
+                    <div class="core-freq">${core.frequency.toFixed(0)} MHz</div>
+                    <canvas class="core-mini-chart" id="core-mini-chart-${core.id}" width="100" height="40"></canvas>
                 `;
                 coresGrid.appendChild(coreDiv);
+                
+                // Crear o actualizar mini-gráfico después de agregar al DOM
+                setTimeout(() => {
+                    if (!miniCharts[core.id]) {
+                        miniCharts[core.id] = createMiniChart(core.id);
+                    }
+                    if (miniCharts[core.id]) {
+                        updateMiniChart(core.id, core.usage);
+                    }
+                }, 50);
+            });
+
+            // I/O de Discos
+            const diskGrid = document.getElementById('disk-io-grid');
+            diskGrid.innerHTML = '';
+            
+            // Obtener información de dispositivos de disco únicos
+            const diskDevices = {};
+            data.disk.devices.forEach(device => {
+                const deviceName = device.device;
+                if (!diskDevices[deviceName]) {
+                    diskDevices[deviceName] = {
+                        name: deviceName,
+                        read_bytes: 0,
+                        write_bytes: 0,
+                        read_count: 0,
+                        write_count: 0
+                    };
+                }
+                diskDevices[deviceName].read_bytes += device.read_bytes || 0;
+                diskDevices[deviceName].write_bytes += device.write_bytes || 0;
+                diskDevices[deviceName].read_count += device.read_count || 0;
+                diskDevices[deviceName].write_count += device.write_count || 0;
+            });
+
+            // Mostrar cada dispositivo
+            Object.values(diskDevices).forEach(device => {
+                const diskDiv = document.createElement('div');
+                diskDiv.className = 'disk-item';
+                diskDiv.innerHTML = `
+                    <div class="disk-name">${device.name}</div>
+                    <div class="disk-metrics">
+                        <div class="disk-io">
+                            <div class="disk-io-value read-speed">${formatBytes(device.read_bytes)}</div>
+                            <div class="disk-io-label">Lectura</div>
+                        </div>
+                        <div class="disk-io">
+                            <div class="disk-io-value write-speed">${formatBytes(device.write_bytes)}</div>
+                            <div class="disk-io-label">Escritura</div>
+                        </div>
+                        <div class="disk-io">
+                            <div class="disk-io-value">${device.read_count.toLocaleString()}</div>
+                            <div class="disk-io-label">Operaciones R</div>
+                        </div>
+                        <div class="disk-io">
+                            <div class="disk-io-value">${device.write_count.toLocaleString()}</div>
+                            <div class="disk-io-label">Operaciones W</div>
+                        </div>
+                    </div>
+                `;
+                diskGrid.appendChild(diskDiv);
             });
         }
         
@@ -885,6 +1256,16 @@ class MissionCenterHandler(SimpleHTTPRequestHandler):
                 charts.disk.data.datasets[0].data = readData;
                 charts.disk.data.datasets[1].data = writeData;
                 charts.disk.update('none');
+                
+                // Actualizar gráficos individuales de I/O
+                if (charts.diskRead) {
+                    charts.diskRead.data.datasets[0].data = readData;
+                    charts.diskRead.update('none');
+                }
+                if (charts.diskWrite) {
+                    charts.diskWrite.data.datasets[0].data = writeData;
+                    charts.diskWrite.update('none');
+                }
             }
             
             // Network Chart (Sent + Received)
@@ -895,11 +1276,73 @@ class MissionCenterHandler(SimpleHTTPRequestHandler):
                 charts.network.data.datasets[1].data = recvData;
                 charts.network.update('none');
             }
+            
+            // Cores Chart - Cada núcleo individual
+            if (history.cpu_cores && charts.cores) {
+                // Actualizar cada núcleo individualmente
+                for (let coreId = 0; coreId < 32; coreId++) {
+                    const coreData = history.cpu_cores[coreId] || Array(60).fill(0);
+                    if (charts.cores.data.datasets[coreId]) {
+                        charts.cores.data.datasets[coreId].data = coreData;
+                    }
+                }
+                charts.cores.update('none');
+            }
+        }
+        
+        // Función para inicializar mini-gráficos automáticamente
+        function initMiniCharts() {
+            // Esperar un poco para que los elementos estén en el DOM
+            setTimeout(() => {
+                for (let coreId = 0; coreId < 32; coreId++) {
+                    const canvas = document.getElementById(`core-mini-chart-${coreId}`);
+                    if (canvas && !miniCharts[coreId]) {
+                        try {
+                            const ctx = canvas.getContext('2d');
+                            
+                            const chart = new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels: Array(30).fill(''),
+                                    datasets: [{
+                                        data: Array(30).fill(0),
+                                        borderColor: `hsl(${coreId * 360 / 32}, 70%, 60%)`,
+                                        backgroundColor: `hsl(${coreId * 360 / 32}, 70%, 60%, 0.1)`,
+                                        fill: true,
+                                        tension: 0.4,
+                                        pointRadius: 0,
+                                        borderWidth: 1.5
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { 
+                                        legend: { display: false },
+                                        tooltip: { enabled: false }
+                                    },
+                                    scales: {
+                                        x: { display: false },
+                                        y: { display: false, min: 0, max: 100 }
+                                    },
+                                    animation: false
+                                }
+                            });
+                            
+                            miniCharts[coreId] = chart;
+                        } catch (error) {
+                            console.error(`Error creando mini-gráfico automático para núcleo ${coreId}:`, error);
+                        }
+                    }
+                }
+                console.log(`Mini-gráficos inicializados: ${Object.keys(miniCharts).length}`);
+            }, 1000);
         }
         
         // Inicialización
         document.addEventListener('DOMContentLoaded', () => {
             initCharts();
+            initMiniCharts(); // Inicializar mini-gráficos
             updateData();
             setInterval(updateData, 1000); // Actualizar cada segundo
         });
