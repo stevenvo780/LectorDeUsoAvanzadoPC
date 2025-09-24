@@ -27,6 +27,15 @@ def load_stylesheet() -> str:
         QLabel {{
             font-family: {FONT_FAMILY};
         }}
+        QLabel[class="performance-title"] {{
+            font-size: 22px;
+            font-weight: 600;
+        }}
+        QLabel[class="performance-subtitle"] {{
+            font-size: 16px;
+            font-weight: 500;
+            color: #cbd5f5;
+        }}
         QListWidget {{
             background-color: transparent;
             border: none;

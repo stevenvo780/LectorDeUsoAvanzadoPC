@@ -28,6 +28,9 @@ class LineHistoryChart(QChartView):
         max_samples: int = 120,
         y_range: tuple[float | None, float | None] | None = None,
         parent: QWidget | None = None,
+        show_axes: bool = True,
+        minimum_height: int = 260,
+        x_axis_title: str | None = "Muestras recientes",
     ) -> None:
         self._series_names = list(series_names)
         if not self._series_names:
@@ -51,12 +54,20 @@ class LineHistoryChart(QChartView):
         self._axis_x.setTickCount(6)
         self._axis_x.setLabelFormat("%d")
         # Usamos índice de muestras; si se quiere tiempo real, migrar a timestamps
-        self._axis_x.setTitleText("Muestras recientes")
+        if x_axis_title is not None:
+            self._axis_x.setTitleText(x_axis_title)
+            self._axis_x.setTitleVisible(bool(x_axis_title))
+        else:
+            self._axis_x.setTitleVisible(False)
+        self._axis_x.setLabelsVisible(show_axes)
+        self._axis_x.setVisible(show_axes)
         chart.addAxis(self._axis_x, Qt.AlignmentFlag.AlignBottom)
 
         self._axis_y = QValueAxis()
         self._axis_y.setTickCount(6)
         self._axis_y.setLabelFormat("%.0f")
+        self._axis_y.setLabelsVisible(show_axes)
+        self._axis_y.setVisible(show_axes)
         chart.addAxis(self._axis_y, Qt.AlignmentFlag.AlignLeft)
 
         for index, name in enumerate(self._series_names):
@@ -70,7 +81,7 @@ class LineHistoryChart(QChartView):
 
         self.setChart(chart)
         self.setRenderHint(QPainter.Antialiasing)
-        self.setMinimumHeight(260)
+        self.setMinimumHeight(minimum_height)
 
     def append_value(self, value: float) -> None:
         """Shorthand for single-series charts."""
