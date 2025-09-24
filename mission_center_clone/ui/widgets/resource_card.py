@@ -16,6 +16,7 @@ class ResourceCard(QWidget):
         self._value = QLabel("--")
         self._value.setProperty("class", "card-value")
         self._value.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self._value.setWordWrap(True)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.addWidget(self._title)

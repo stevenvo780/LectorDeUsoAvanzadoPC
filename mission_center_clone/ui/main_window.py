@@ -17,24 +17,34 @@ from PySide6.QtWidgets import (
 
 from mission_center_clone.core import CONFIG, DataUpdateCoordinator, load_stylesheet
 from mission_center_clone.data import (
+    collect_battery_snapshot,
     collect_cpu_snapshot,
     collect_disk_snapshot,
+    collect_fan_sensors,
     collect_gpu_snapshot,
     collect_io_snapshot,
     collect_memory_snapshot,
     collect_network_snapshot,
     collect_pcie_snapshot,
+    collect_power_sources_snapshot,
     collect_process_snapshot,
+    collect_system_info,
+    collect_temperature_sensors,
 )
 from mission_center_clone.models import (
+    BatterySnapshot,
     CPUSnapshot,
     DiskSnapshot,
+    FanSensorsSnapshot,
     GPUSnapshot,
     IOSnapshot,
     MemorySnapshot,
     NetworkSnapshot,
     PCIESnapshot,
+    PowerSourcesSnapshot,
     ProcessSnapshot,
+    SystemInfoSnapshot,
+    TemperatureSensorsSnapshot,
 )
 from mission_center_clone.ui.dashboard import DashboardView
 from mission_center_clone.ui.performance.cpu_view import CPUPerformanceView
@@ -45,6 +55,8 @@ from mission_center_clone.ui.performance.memory_view import MemoryPerformanceVie
 from mission_center_clone.ui.performance.network_view import NetworkPerformanceView
 from mission_center_clone.ui.performance.pcie_view import PCIEPerformanceView
 from mission_center_clone.ui.processes import ProcessesView
+from mission_center_clone.ui.sensors import SensorsView
+from mission_center_clone.ui.system_info import SystemInfoView
 
 
 class MainWindow(QMainWindow):
@@ -64,6 +76,8 @@ class MainWindow(QMainWindow):
         self._nav.addItem(QListWidgetItem("Panel general"))
         self._nav.addItem(QListWidgetItem("Procesos"))
         self._nav.addItem(QListWidgetItem("Rendimiento"))
+        self._nav.addItem(QListWidgetItem("Sensores"))
+        self._nav.addItem(QListWidgetItem("Sistema"))
         self._nav.setCurrentRow(0)
         layout.addWidget(self._nav)
 
@@ -74,6 +88,8 @@ class MainWindow(QMainWindow):
         self._processes = ProcessesView()
         self._performance_tabs = QTabWidget()
         self._performance_tabs.setDocumentMode(True)
+        self._sensors_view = SensorsView()
+        self._system_view = SystemInfoView()
 
         self._cpu_view = CPUPerformanceView()
         self._memory_view = MemoryPerformanceView()
@@ -94,6 +110,8 @@ class MainWindow(QMainWindow):
         self._stack.addWidget(self._dashboard)
         self._stack.addWidget(self._processes)
         self._stack.addWidget(self._performance_tabs)
+        self._stack.addWidget(self._sensors_view)
+        self._stack.addWidget(self._system_view)
 
         self._nav.currentRowChanged.connect(self._stack.setCurrentIndex)
 
@@ -105,6 +123,11 @@ class MainWindow(QMainWindow):
             "io": collect_io_snapshot,
             "network": collect_network_snapshot,
             "pcie": collect_pcie_snapshot,
+            "temperature": collect_temperature_sensors,
+            "fans": collect_fan_sensors,
+            "battery": collect_battery_snapshot,
+            "power": collect_power_sources_snapshot,
+            "system": collect_system_info,
             "processes": collect_process_snapshot,
         }
         intervals = {
@@ -116,6 +139,11 @@ class MainWindow(QMainWindow):
             "io": CONFIG.medium,
             "network": CONFIG.medium,
             "pcie": CONFIG.slow,
+            "temperature": CONFIG.medium,
+            "fans": CONFIG.medium,
+            "battery": CONFIG.slow,
+            "power": CONFIG.slow,
+            "system": CONFIG.slow * 2,
         }
         self._coordinator = DataUpdateCoordinator(providers, intervals, self)
         self._coordinator.snapshot_updated.connect(self._on_snapshot)
@@ -150,5 +178,20 @@ class MainWindow(QMainWindow):
             self._pcie_view.update_snapshot(snapshot)
         elif key == "processes" and isinstance(snapshot, ProcessSnapshot):
             self._processes.update_snapshot(snapshot)
+        elif key == "temperature" and isinstance(snapshot, TemperatureSensorsSnapshot):
+            self._dashboard.update_temperature(snapshot)
+            self._sensors_view.update_temperature(snapshot)
+        elif key == "fans" and isinstance(snapshot, FanSensorsSnapshot):
+            self._dashboard.update_fans(snapshot)
+            self._sensors_view.update_fans(snapshot)
+        elif key == "battery" and isinstance(snapshot, BatterySnapshot):
+            self._dashboard.update_battery(snapshot)
+            self._sensors_view.update_battery(snapshot)
+        elif key == "power" and isinstance(snapshot, PowerSourcesSnapshot):
+            self._dashboard.update_power(snapshot)
+            self._sensors_view.update_power_sources(snapshot)
+        elif key == "system" and isinstance(snapshot, SystemInfoSnapshot):
+            self._dashboard.update_system(snapshot)
+            self._system_view.update_snapshot(snapshot)
 
         self.statusBar().showMessage(f"Actualizado {key}")

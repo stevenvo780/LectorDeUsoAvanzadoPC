@@ -8,6 +8,13 @@ from .memory import collect_memory_snapshot
 from .network import collect_network_snapshot
 from .pcie import collect_pcie_snapshot
 from .processes import collect_process_snapshot
+from .sensors import (
+    collect_battery_snapshot,
+    collect_fan_sensors,
+    collect_power_sources_snapshot,
+    collect_temperature_sensors,
+)
+from .system import collect_system_info
 
 __all__ = [
     "collect_cpu_snapshot",
@@ -18,4 +25,9 @@ __all__ = [
     "collect_network_snapshot",
     "collect_pcie_snapshot",
     "collect_process_snapshot",
+    "collect_battery_snapshot",
+    "collect_fan_sensors",
+    "collect_power_sources_snapshot",
+    "collect_temperature_sensors",
+    "collect_system_info",
 ]

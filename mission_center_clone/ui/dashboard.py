@@ -5,13 +5,18 @@ from __future__ import annotations
 from PySide6.QtWidgets import QGridLayout, QWidget
 
 from mission_center_clone.models import (
+    BatterySnapshot,
     CPUSnapshot,
     DiskSnapshot,
+    FanSensorsSnapshot,
     GPUSnapshot,
     IOSnapshot,
     MemorySnapshot,
     NetworkSnapshot,
     PCIESnapshot,
+    PowerSourcesSnapshot,
+    SystemInfoSnapshot,
+    TemperatureSensorsSnapshot,
 )
 from mission_center_clone.ui.widgets.resource_card import ResourceCard
 
@@ -40,6 +45,11 @@ class DashboardView(QWidget):
             "network": ResourceCard("Red"),
             "io": ResourceCard("IO"),
             "pcie": ResourceCard("PCIe"),
+            "temperature": ResourceCard("Temperaturas"),
+            "fans": ResourceCard("Ventiladores"),
+            "battery": ResourceCard("Batería"),
+            "power": ResourceCard("Energía"),
+            "system": ResourceCard("Sistema"),
         }
         positions = [
             (0, 0, "cpu"),
@@ -49,13 +59,18 @@ class DashboardView(QWidget):
             (1, 1, "network"),
             (1, 2, "io"),
             (2, 0, "pcie"),
+            (2, 1, "temperature"),
+            (2, 2, "fans"),
+            (3, 0, "battery"),
+            (3, 1, "power"),
+            (3, 2, "system"),
         ]
         for row, col, key in positions:
             layout.addWidget(self._cards[key], row, col)
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
         layout.setColumnStretch(2, 1)
-        layout.setRowStretch(3, 1)
+        layout.setRowStretch(4, 1)
 
     def update_cpu(self, snapshot: CPUSnapshot) -> None:
         self._cards["cpu"].update_value(f"{snapshot.usage_percent:.1f}%")
@@ -108,3 +123,66 @@ class DashboardView(QWidget):
             return
         active = sum(1 for device in snapshot.devices if device.link_speed_gtps)
         self._cards["pcie"].update_value(f"{active}/{len(snapshot.devices)} enlaces activos")
+
+    def update_temperature(self, snapshot: TemperatureSensorsSnapshot) -> None:
+        readings = [
+            reading
+            for group in snapshot.groups
+            for reading in group.readings
+            if reading.current_celsius is not None
+        ]
+        if not readings:
+            self._cards["temperature"].update_value("Sin sensores")
+            return
+        max_reading = max(readings, key=lambda r: r.current_celsius or 0.0)
+        avg = sum(r.current_celsius or 0.0 for r in readings) / len(readings)
+        label = max_reading.label or max_reading.source
+        self._cards["temperature"].update_value(
+            f"Máx {max_reading.current_celsius:.1f}°C ({label})\nProm {avg:.1f}°C"
+        )
+
+    def update_fans(self, snapshot: FanSensorsSnapshot) -> None:
+        readings = [r for r in snapshot.readings if r.speed_rpm is not None]
+        if not readings:
+            self._cards["fans"].update_value("Sin ventiladores")
+            return
+        max_rpm = max(readings, key=lambda r: r.speed_rpm or 0.0)
+        avg_rpm = sum(r.speed_rpm or 0.0 for r in readings) / len(readings)
+        label = max_rpm.label or max_rpm.source
+        self._cards["fans"].update_value(
+            f"Máx {max_rpm.speed_rpm:.0f} rpm ({label})\nProm {avg_rpm:.0f} rpm"
+        )
+
+    def update_battery(self, snapshot: BatterySnapshot) -> None:
+        if snapshot.percent is None:
+            self._cards["battery"].update_value("Sin batería")
+            return
+        status = "Enchufada" if snapshot.power_plugged else "Descargando"
+        remaining = "--"
+        if snapshot.secs_left:
+            hours = int(snapshot.secs_left // 3600)
+            minutes = int((snapshot.secs_left % 3600) // 60)
+            remaining = f"{hours:02d}h{minutes:02d}m"
+        self._cards["battery"].update_value(
+            f"{snapshot.percent:.0f}% ({status})\nRestante {remaining}"
+        )
+
+    def update_power(self, snapshot: PowerSourcesSnapshot) -> None:
+        if not snapshot.sources:
+            self._cards["power"].update_value("Sin fuentes")
+            return
+        online = sum(1 for s in snapshot.sources if s.is_online)
+        mains = next((s for s in snapshot.sources if s.name.lower().startswith("ac")), None)
+        if mains and mains.power_watts:
+            detail = f"AC {mains.power_watts:.1f} W"
+        else:
+            detail = f"{online}/{len(snapshot.sources)} activas"
+        self._cards["power"].update_value(detail)
+
+    def update_system(self, snapshot: SystemInfoSnapshot) -> None:
+        os_text = " ".join(filter(None, [snapshot.os_name, snapshot.os_version])) or "--"
+        uptime = "--"
+        if snapshot.uptime_seconds is not None:
+            hours = int(snapshot.uptime_seconds // 3600)
+            uptime = f"{hours} h" if hours < 72 else f"{hours // 24} d"
+        self._cards["system"].update_value(f"{os_text}\nUptime {uptime}")

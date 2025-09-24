@@ -1,27 +1,30 @@
 # Mission Center Clone - Monitor de Sistema
 
-Monitor avanzado del sistema estilo Windows con interfaz web moderna y datos en tiempo real.
+Monitor avanzado estilo Mission Center de Windows, construido en PySide6 con cobertura total de sensores de hardware y paneles en tiempo real.
 
-## 🚀 **Ejecución Rápida**
+## 🚀 Ejecución rápida
 ```bash
-python3 mission_center_advanced.py
+python -m mission_center_clone.app
 ```
-Después abre: **http://localhost:8081**
+> Para entornos sin pantalla física: `QT_QPA_PLATFORM=offscreen python scripts/smoke.py`
 
-## ✨ **Características**
-- **🔥 CPU**: Gráficos por núcleo individual con frecuencias
-- **💾 Memoria**: RAM + Swap con historial en tiempo real  
-- **💽 Almacenamiento**: Velocidades E/S por dispositivo
-- **🌐 Red**: Interfaces activas con subida/bajada
-- **📊 Procesos**: Lista ordenada por uso de CPU
-- **🎮 Hardware**: GPU, PCIe, estadísticas avanzadas
-- **📈 Gráficos**: Historia de 60 segundos con Chart.js
+## ✨ Qué incluye ahora
+- **🔥 CPU**: uso instantáneo, núcleos individuales, frecuencias y promedios de carga.
+- **💾 Memoria**: RAM + swap con métricas agregadas y gráficas históricas.
+- **💽 Almacenamiento**: lecturas/escrituras por dispositivo, montajes y espacio disponible.
+- **🌐 Red**: interfaces activas, throughput en tiempo real y autodetección de IPs.
+- **📊 Procesos**: tabla ordenable por CPU/RAM con IO y comando completo.
+- **🎮 GPU / PCIe**: métricas NVML opcionales, enlaces PCIe actuales y máximos.
+- **🌡️ Sensores**: temperaturas agrupadas por origen, ventiladores, batería, fuentes de poder.
+- **🖥️ Sistema**: ficha completa (OS, kernel, BIOS, placa base, chasis, virtualización, GPUs).
+- **📈 Históricos**: gráficos rolling window para CPU, GPU, IO, temperatura y ventiladores.
 
-## 🎯 **Interfaz Estilo Windows**
-- Sidebar con 4 secciones principales
-- Diseño idéntico al Mission Center de Windows
-- Actualización automática cada segundo
-- Responsive design y colores modernos
+## 🎯 Interfaz tipo Mission Center
+- Barra lateral con secciones: Panel, Procesos, Rendimiento, Sensores y Sistema.
+- Tarjetas compactas con estado resumido y mensajes claros cuando faltan datos.
+- Tabs de rendimiento por recurso con gráficos en vivo (Qt Charts).
+- Vistas especializadas para sensores con tablas dinámicas y gráficas de máximos/promedios.
+- Tema oscuro inspirado en Fluent Design; estilizable desde `core/theme.py`.
 
 ## 📦 **Requisitos**
 ```bash
@@ -31,26 +34,27 @@ pip install -r requirements.txt
 ## 📁 **Estructura**
 ```
 mission_center_clone/         # Paquete Python con colectores
-mission_center_advanced.py    # Servidor web + interfaz completa
+mission_center_advanced.py    # Legacy: servidor web/SPA opcional
 requirements.txt              # Dependencias mínimas
 docs/                         # Documentación técnica
 ```
 
-## 🔧 **Arquitectura**
-- **Backend**: HTTP server con colectores de datos
-- **Frontend**: HTML5 + CSS3 + JavaScript + Chart.js
-- **Datos**: psutil + pynvml + pyudev para máxima cobertura
+## 🔧 Arquitectura
+- **Qt Widgets**: UI nativa en PySide6 (sin servidor web).
+- **Coordinador**: `DataUpdateCoordinator` orquesta los proveedores en intervalos independientes.
+- **Modelo de datos**: dataclasses inmutables para snapshots (CPU, sensores, sistema, etc.).
+- **Colectores**: psutil como base, opcionales `pynvml`/`pyudev` para GPU/PCIe.
 
 ## 🌐 **Acceso**
 Una vez ejecutado, accede a **http://localhost:8081** para ver la interfaz completa estilo Windows con monitoreo en tiempo real del sistema.
 
 ## Características
-- **Panel general** con tarjetas en tiempo real para los recursos clave del sistema.
+- **Panel general** con 11 tarjetas (CPU, memoria, GPU, discos, red, IO, PCIe, temperatura, ventiladores, batería, energía, sistema).
 - **Gestor de procesos** con ordenamiento por consumo y métricas de IO por proceso.
 - **Pestañas de rendimiento** por categoría, replicando la navegación del Mission Center.
-- **Monitoreo IO** agregado por segundo (lecturas/escrituras y operaciones).
-- **Mapa PCIe** con velocidad/anchura del enlace actual y máxima cuando el kernel lo expone.
-- Arquitectura modular para ampliar proveedores de datos o reemplazar la interfaz.
+- **Vista de sensores** con tabs para temperaturas, ventiladores y energía (batería/fuentes).
+- **Ficha del sistema** con BIOS, fabricante, chasis, uptime, virtualización y GPUs.
+- Arquitectura modular para ampliar proveedores o sustituir la UI sin cambiar colectores.
 
 ## Requisitos
 - Python 3.10+ (probado en 3.10/3.11).
