@@ -1,0 +1,63 @@
+# Compilados y bytecode de Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+
+# Entornos virtuales y variables de entorno
+.env
+.env.*
+.venv/
+venv/
+.envrc
+
+# Cachés y herramientas de análisis
+.mypy_cache/
+.pytest_cache/
+.cache/
+coverage/
+.coverage
+htmlcov/
+
+# Archivos de log y temporales
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Configuraciones de IDE/Editor
+.vscode/
+.idea/
+*.code-workspace
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Artifacts generados por agentes o ejecuciones automatizadas
+artifacts/
+.agent/
+docs/_agent/**
+transactions/**
+playwright-report/
+test-results/
+trace.zip
+storageState.json
+*.har
+
+# Archivos binarios o media pesados no versionados
+*.mp4
+*.mov
+*.avi
+*.png
+*.jpg
+*.jpeg
+
+# Otros
+*.sqlite
