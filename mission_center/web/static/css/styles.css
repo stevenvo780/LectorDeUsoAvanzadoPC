@@ -272,31 +272,59 @@ body {
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.5);
 }
 
-.core-title {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
+.core-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: rgba(148, 163, 184, 0.8);
 }
 
-.core-usage {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--accent-2);
-    margin-bottom: 6px;
+.core-header span {
+    font-weight: 600;
 }
 
-.core-frequency {
-    font-size: 0.85rem;
-    color: rgba(148, 163, 184, 0.9);
-    margin-bottom: 12px;
+.core-chart {
+    height: 110px;
 }
 
 .core-mini-chart {
     width: 100%;
-    height: 60px;
+    height: 100%;
+}
+
+.core-footer {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.core-footer-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.core-footer-label {
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: rgba(148, 163, 184, 0.7);
+}
+
+.core-footer-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
 }
 
 .process-table {

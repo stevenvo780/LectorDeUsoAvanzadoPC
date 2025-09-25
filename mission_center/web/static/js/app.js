@@ -4,6 +4,7 @@ const charts = {};
 const miniCharts = new Map();
 const coresHistory = new Map();
 let currentSection = "overview";
+const CORE_HISTORY_LENGTH = 60;
 
 const NAV_ITEMS = Array.from(document.querySelectorAll(".nav-item"));
 
@@ -216,26 +217,6 @@ function initCharts() {
         },
     });
 
-    charts.cores = createLineChart("coresChart", {
-        options: {
-            plugins: {
-                legend: {
-                    display: true,
-                    position: "top",
-                    labels: { color: "#e2e8f0", font: { size: 10 } },
-                },
-            },
-        },
-        data: {
-            datasets: Array.from({ length: 32 }, (_, index) => ({
-                label: `Núcleo ${index}`,
-                data: Array(60).fill(0),
-                borderColor: `hsl(${(index * 360) / 32}, 70%, 60%)`,
-                fill: false,
-            })),
-        },
-    });
-
     charts.diskRead = createLineChart("diskReadChart", {
         data: {
             datasets: [
@@ -350,11 +331,11 @@ function ensureMiniChart(coreId, label) {
     const chart = new Chart(canvas.getContext("2d"), {
         type: "line",
         data: {
-            labels: Array(30).fill(""),
+            labels: Array(CORE_HISTORY_LENGTH).fill(""),
             datasets: [
                 {
                     label,
-                    data: Array(30).fill(0),
+                    data: Array(CORE_HISTORY_LENGTH).fill(0),
                     borderColor: `hsl(${(coreId * 360) / 32}, 70%, 60%)`,
                     backgroundColor: `hsla(${(coreId * 360) / 32}, 70%, 60%, 0.18)`,
                     fill: true,
@@ -384,18 +365,31 @@ function updateCoreGrid(cpu) {
     cores.forEach((core) => {
         const card = document.createElement("div");
         card.className = "core-item";
+        const usageText = `${core.usage_percent.toFixed(1)}%`;
+        const frequencyText = core.frequency_mhz != null ? formatFrequency(core.frequency_mhz) : "--";
         card.innerHTML = `
-            <div class="core-title">
+            <div class="core-header">
                 <span>Núcleo ${core.core_id}</span>
-                <span>${core.frequency_mhz ? core.frequency_mhz.toFixed(0) : "--"} MHz</span>
             </div>
-            <div class="core-usage">${core.usage_percent.toFixed(1)}%</div>
-            <div class="core-frequency">Frecuencia actual</div>
-            <canvas class="core-mini-chart" id="core-mini-${core.core_id}" width="160" height="60"></canvas>
+            <div class="core-chart">
+                <canvas class="core-mini-chart" id="core-mini-${core.core_id}" width="220" height="120"></canvas>
+            </div>
+            <div class="core-footer">
+                <div class="core-footer-block">
+                    <span class="core-footer-label">Uso</span>
+                    <span class="core-footer-value">${usageText}</span>
+                </div>
+                <div class="core-footer-block">
+                    <span class="core-footer-label">Frecuencia</span>
+                    <span class="core-footer-value">${frequencyText}</span>
+                </div>
+            </div>
         `;
         grid.appendChild(card);
-        const history = coresHistory.get(core.core_id) ?? Array(30).fill(0);
-        history.shift();
+        const history = coresHistory.get(core.core_id) ?? Array(CORE_HISTORY_LENGTH).fill(core.usage_percent);
+        if (history.length >= CORE_HISTORY_LENGTH) {
+            history.shift();
+        }
         history.push(core.usage_percent);
         coresHistory.set(core.core_id, history);
         const chart = ensureMiniChart(core.core_id, `Núcleo ${core.core_id}`);
@@ -658,15 +652,6 @@ function updateHistoryCharts(history) {
     if (charts.diskWrite && history.disk) {
         charts.diskWrite.data.datasets[0].data = history.disk.map((entry) => (entry.write || 0) / 1024 / 1024);
         charts.diskWrite.update("none");
-    }
-    if (charts.cores && history.cpu_cores) {
-        Object.entries(history.cpu_cores).forEach(([coreId, values]) => {
-            const index = Number(coreId);
-            if (!Number.isNaN(index) && charts.cores.data.datasets[index]) {
-                charts.cores.data.datasets[index].data = values.map((entry) => entry.usage ?? 0);
-            }
-        });
-        charts.cores.update("none");
     }
     if (charts.temp && history.temperature) {
         const maxValues = history.temperature.map((entry) => {
