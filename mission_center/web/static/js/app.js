@@ -1,4 +1,4 @@
-// Mission Center Web UI logic
+
 
 const charts = {};
 const miniCharts = new Map();
@@ -135,13 +135,13 @@ function updatePermissionsIndicator(permissions) {
     const level = permissions.permission_level || "limited";
     const accessPercentage = permissions.access_percentage || 0;
     
-    // Remover clases existentes
+
     indicator.classList.remove("perm-full", "perm-good", "perm-partial", "perm-limited");
     
-    // Añadir clase basada en el nivel
+
     indicator.classList.add(`perm-${level}`);
     
-    // Actualizar texto e icono
+
     const icons = {
         full: "🔓",
         good: "🟢", 
@@ -406,7 +406,7 @@ function updateCoreGrid(cpu) {
     const cores = cpu?.per_core || [];
     const grid = document.getElementById("cpu-cores-grid");
     
-    // Destruir gráficos existentes antes de borrar el HTML
+
     miniCharts.forEach(chart => chart.destroy());
     miniCharts.clear();
     grid.innerHTML = "";
@@ -750,10 +750,10 @@ function updateGPUGrid(gpu) {
         return;
     }
 
-    // Verificar si necesitamos recrear las tarjetas (número de GPUs cambió)
+
     const existingCards = grid.querySelectorAll('.gpu-card');
     if (existingCards.length !== gpus.length) {
-        // Solo recrear si el número de GPUs ha cambiado
+
         gpuCharts.forEach(chart => chart.destroy());
         gpuCharts.clear();
         grid.innerHTML = "";
@@ -763,7 +763,7 @@ function updateGPUGrid(gpu) {
             grid.appendChild(card);
         });
     } else {
-        // Solo actualizar los valores existentes
+
         gpus.forEach((gpuData, index) => {
             updateGPUCardData(existingCards[index], gpuData, index);
         });
@@ -806,7 +806,7 @@ function createGPUCard(gpuData, index) {
         </div>
     `;
     
-    // Crear historial si no existe
+
     if (!gpuHistory.has(index)) {
         gpuHistory.set(index, Array(60).fill(gpuData.utilization_percent));
     }
@@ -815,7 +815,7 @@ function createGPUCard(gpuData, index) {
 }
 
 function updateGPUCardData(card, gpuData, index) {
-    // Actualizar solo los valores que cambian
+
     const utilizationEl = card.querySelector('.gpu-utilization-value');
     const temperatureEl = card.querySelector('.gpu-temperature-value');
     const memoryEl = card.querySelector('.gpu-memory-value');
@@ -834,7 +834,7 @@ function updateGPUCardData(card, gpuData, index) {
         clockEl.textContent = `${gpuData.extra?.graphics_clock_mhz?.toFixed(0) || '--'} MHz`;
     }
     
-    // Actualizar historial
+
     if (!gpuHistory.has(index)) {
         gpuHistory.set(index, Array(60).fill(gpuData.utilization_percent));
     }
@@ -845,14 +845,14 @@ function updateGPUCardData(card, gpuData, index) {
     }
     history.push(gpuData.utilization_percent);
     
-    // Actualizar gráfico existente o crear nuevo si no existe
+
     const existingChart = gpuCharts.get(index);
     if (existingChart) {
-        // Solo actualizar datos del gráfico existente
+
         existingChart.data.datasets[0].data = [...history];
-        existingChart.update('none'); // Actualización sin animación para evitar saltos
+        existingChart.update('none');
     } else {
-        // Crear gráfico solo si no existe
+
         const canvas = document.getElementById(`gpu-chart-${index}`);
         if (canvas) {
             const ctx = canvas.getContext('2d');
@@ -880,7 +880,7 @@ function updateGPUCardData(card, gpuData, index) {
                         y: { display: false, min: 0, max: 100 }
                     },
                     elements: { point: { radius: 0 } },
-                    animation: false // Desactivar animaciones para evitar saltos
+                    animation: false
                 }
             });
             gpuCharts.set(index, chart);
@@ -895,7 +895,7 @@ function getDeviceType(deviceName) {
     return 'other';
 }
 
-// Mantener lista estable de dispositivos I/O para evitar saltos
+
 let stableIODevices = new Set();
 
 function updateIODevicesGrid(io) {
@@ -908,7 +908,7 @@ function updateIODevicesGrid(io) {
         return;
     }
 
-    // Identificar dispositivos principales sin filtrar por actividad para mantener estabilidad
+
     const allRelevantDevices = Object.entries(io.per_device)
         .filter(([name, stats]) => {
             return !name.startsWith('loop') && 
@@ -917,14 +917,14 @@ function updateIODevicesGrid(io) {
         })
         .map(([name, stats]) => name);
 
-    // Agregar nuevos dispositivos a la lista estable
+
     allRelevantDevices.forEach(deviceName => {
         stableIODevices.add(deviceName);
     });
 
-    // Usar la lista estable para mantener consistencia visual
+
     const devices = Array.from(stableIODevices)
-        .slice(0, 12) // Limitar a 12 dispositivos
+        .slice(0, 12)
         .map(name => [name, io.per_device[name] || { 
             read_bytes_per_sec: 0, 
             write_bytes_per_sec: 0, 
@@ -935,7 +935,7 @@ function updateIODevicesGrid(io) {
 
     const existingCards = grid.querySelectorAll('.io-device-card');
     
-    // Verificar si necesitamos recrear las tarjetas (número de dispositivos cambió)
+
     if (existingCards.length !== devices.length) {
         grid.innerHTML = "";
         
@@ -944,7 +944,7 @@ function updateIODevicesGrid(io) {
             grid.appendChild(card);
         });
     } else {
-        // Solo actualizar los valores existentes
+
         devices.forEach(([deviceName, stats], index) => {
             if (existingCards[index]) {
                 updateIODeviceCardData(existingCards[index], deviceName, stats);
@@ -988,7 +988,7 @@ function createIODeviceCard(deviceName, stats) {
         </div>
     `;
     
-    // Actualizar con los datos iniciales
+
     updateIODeviceCardData(card, deviceName, stats);
     
     return card;

@@ -1,4 +1,4 @@
-/* Mission Center Web UI styles */
+
 
 :root {
     color-scheme: dark;
@@ -183,7 +183,7 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-/* Indicadores de permisos */
+
 .permissions-indicator {
     cursor: help;
     transition: all var(--transition);
@@ -223,7 +223,7 @@ body {
     text-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
-/* Grid de metadatos del sistema */
+
 .system-meta-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -315,7 +315,7 @@ body {
 
 .cores-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
 }
 
@@ -387,6 +387,9 @@ body {
     font-weight: 600;
     color: var(--text-primary);
     font-variant-numeric: tabular-nums;
+    min-width: 60px;
+    text-align: right;
+    display: inline-block;
 }
 
 .process-table {
@@ -532,7 +535,7 @@ body {
     }
 }
 
-/* GPU Cards Grid */
+
 .gpu-cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -635,7 +638,7 @@ body {
     height: 100%;
 }
 
-/* I/O Devices Grid */
+
 .io-devices-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
