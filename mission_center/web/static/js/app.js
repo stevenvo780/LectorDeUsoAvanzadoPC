@@ -895,6 +895,9 @@ function getDeviceType(deviceName) {
     return 'other';
 }
 
+// Mantener lista estable de dispositivos I/O para evitar saltos
+let stableIODevices = new Set();
+
 function updateIODevicesGrid(io) {
     const grid = document.getElementById("io-devices-grid");
     
@@ -905,16 +908,30 @@ function updateIODevicesGrid(io) {
         return;
     }
 
-    // Filtrar solo dispositivos principales (evitar particiones menores)
-    const devices = Object.entries(io.per_device)
+    // Identificar dispositivos principales sin filtrar por actividad para mantener estabilidad
+    const allRelevantDevices = Object.entries(io.per_device)
         .filter(([name, stats]) => {
-            // Mostrar solo dispositivos principales y sus particiones más importantes
             return !name.startsWith('loop') && 
                    !name.startsWith('zram') && 
-                   (stats.read_bytes_per_sec > 0 || stats.write_bytes_per_sec > 0 || 
-                    name.match(/^(nvme\d+n\d+|sd[a-z]|md\d+)$/));
+                   name.match(/^(nvme\d+n\d+|sd[a-z]|md\d+)$/);
         })
-        .slice(0, 12); // Limitar a 12 dispositivos
+        .map(([name, stats]) => name);
+
+    // Agregar nuevos dispositivos a la lista estable
+    allRelevantDevices.forEach(deviceName => {
+        stableIODevices.add(deviceName);
+    });
+
+    // Usar la lista estable para mantener consistencia visual
+    const devices = Array.from(stableIODevices)
+        .slice(0, 12) // Limitar a 12 dispositivos
+        .map(name => [name, io.per_device[name] || { 
+            read_bytes_per_sec: 0, 
+            write_bytes_per_sec: 0, 
+            read_count_per_sec: 0, 
+            write_count_per_sec: 0, 
+            utilization_percent: 0 
+        }]);
 
     const existingCards = grid.querySelectorAll('.io-device-card');
     
