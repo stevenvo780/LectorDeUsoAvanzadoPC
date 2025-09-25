@@ -10,11 +10,14 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from .collector import DataCollector, collector
+from .template_renderer import SimpleTemplateRenderer
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
-INDEX_TEMPLATE = (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
+
+# Initialize template renderer
+template_renderer = SimpleTemplateRenderer(TEMPLATES_DIR)
 
 
 class MissionCenterRequestHandler(SimpleHTTPRequestHandler):
@@ -43,7 +46,14 @@ class MissionCenterRequestHandler(SimpleHTTPRequestHandler):
         return
 
     def _send_index(self) -> None:
-        content = INDEX_TEMPLATE.encode("utf-8")
+        # Try new template system first, fallback to old system
+        try:
+            rendered_html = template_renderer.render("index_new.html")
+            content = rendered_html.encode("utf-8")
+        except FileNotFoundError:
+            # Fallback to original index.html
+            index_path = TEMPLATES_DIR / "index.html"
+            content = index_path.read_text(encoding="utf-8").encode("utf-8")
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))

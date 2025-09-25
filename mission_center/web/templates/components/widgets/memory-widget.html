@@ -1,0 +1,40 @@
+<!-- Memory Widget -->
+<div class="widget widget-medium" data-widget-id="memory" data-widget-type="memory" draggable="true">
+    <div class="widget-header">
+        <h3><i data-lucide="memory-stick"></i> Memoria</h3>
+        <div class="widget-controls">
+            <button class="widget-btn" data-action="resize" title="Redimensionar">
+                <i data-lucide="maximize-2"></i>
+            </button>
+            <button class="widget-btn" data-action="remove" title="Eliminar">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+    </div>
+    <div class="widget-content">
+        <div class="metric-grid">
+            <div class="metric">
+                <div class="metric-label">RAM usada</div>
+                <div class="metric-value" id="mem-usage">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">RAM total</div>
+                <div class="metric-value" id="mem-total">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Swap usada</div>
+                <div class="metric-value" id="swap-usage">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Swap total</div>
+                <div class="metric-value" id="swap-total">--</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="memoryChart"></canvas>
+        </div>
+    </div>
+    <div class="resize-handles">
+        <div class="resize-handle resize-se"></div>
+    </div>
+</div>

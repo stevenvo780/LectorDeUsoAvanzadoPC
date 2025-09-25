@@ -1,0 +1,29 @@
+<section id="sensors" class="hidden">
+    <article class="card">
+        <h3><i data-lucide="thermometer"></i> Temperaturas</h3>
+        <div class="chart-container">
+            <canvas id="tempChart"></canvas>
+        </div>
+        <table class="sensor-table" id="temp-table"></table>
+    </article>
+    <article class="card">
+        <h3><i data-lucide="wind"></i> Ventiladores</h3>
+        <div class="chart-container">
+            <canvas id="fanChart"></canvas>
+        </div>
+        <table class="sensor-table" id="fan-table"></table>
+    </article>
+    <article class="card">
+        <h3><i data-lucide="battery"></i> Energía</h3>
+        <div class="sensor-grid">
+            <div class="system-card">
+                <h4>Batería</h4>
+                <dl id="battery-info"></dl>
+            </div>
+            <div class="system-card">
+                <h4>Fuentes de energía</h4>
+                <table class="sensor-table" id="power-table"></table>
+            </div>
+        </div>
+    </article>
+</section>

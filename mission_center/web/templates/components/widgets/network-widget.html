@@ -1,0 +1,40 @@
+<!-- Network Widget -->
+<div class="widget widget-medium" data-widget-id="network" data-widget-type="network" draggable="true">
+    <div class="widget-header">
+        <h3><i data-lucide="network"></i> Red</h3>
+        <div class="widget-controls">
+            <button class="widget-btn" data-action="resize" title="Redimensionar">
+                <i data-lucide="maximize-2"></i>
+            </button>
+            <button class="widget-btn" data-action="remove" title="Eliminar">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+    </div>
+    <div class="widget-content">
+        <div class="metric-grid">
+            <div class="metric">
+                <div class="metric-label">Subida</div>
+                <div class="metric-value" id="net-sent">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Bajada</div>
+                <div class="metric-value" id="net-recv">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Interfaces</div>
+                <div class="metric-value" id="net-interfaces">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">GPUs</div>
+                <div class="metric-value" id="gpu-count">--</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="networkChart"></canvas>
+        </div>
+    </div>
+    <div class="resize-handles">
+        <div class="resize-handle resize-se"></div>
+    </div>
+</div>

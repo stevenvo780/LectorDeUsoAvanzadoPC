@@ -241,32 +241,215 @@ body {
     border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
-.dashboard {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
+/* Interactive Dashboard Styles */
+.interactive-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-.card {
+.dashboard-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow);
+}
+
+.dashboard-toolbar h2 {
+    margin: 0;
+    color: var(--accent);
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toolbar-right {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    border-radius: 8px;
+    padding: 8px;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    background: rgba(34, 211, 238, 0.2);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.widgets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    min-height: 400px;
+    position: relative;
+}
+
+/* Widget Styles */
+.widget {
     background: var(--card-bg);
     border-radius: 16px;
-    padding: 20px;
     border: 1px solid var(--card-border);
     backdrop-filter: blur(12px);
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: all var(--transition);
+    cursor: grab;
 }
 
-.card h3 {
+.widget:hover {
+    border-color: var(--accent);
+    box-shadow: 0 15px 40px rgba(34, 211, 238, 0.15);
+}
+
+.widget.dragging {
+    cursor: grabbing;
+    transform: rotate(2deg) scale(0.95);
+    z-index: 1000;
+    box-shadow: 0 20px 50px rgba(34, 211, 238, 0.3);
+}
+
+.widget.resizing {
+    cursor: nw-resize;
+}
+
+/* Widget Sizes */
+.widget-small {
+    grid-column: span 1;
+    min-height: 200px;
+}
+
+.widget-medium {
+    grid-column: span 1;
+    min-height: 300px;
+}
+
+.widget-large {
+    grid-column: span 2;
+    min-height: 400px;
+}
+
+.widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px 0;
+    position: relative;
+}
+
+.widget-header h3 {
     margin: 0;
     color: var(--accent);
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     letter-spacing: 0.01em;
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.widget-controls {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+
+.widget:hover .widget-controls {
+    opacity: 1;
+}
+
+.widget-btn {
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    border-radius: 6px;
+    padding: 6px;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
+.widget-btn:hover {
+    background: rgba(34, 211, 238, 0.2);
+    border-color: var(--accent);
+}
+
+.widget-content {
+    flex: 1;
+    padding: 16px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Resize Handles */
+.resize-handles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.resize-handle {
+    position: absolute;
+    pointer-events: all;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+
+.widget:hover .resize-handle {
+    opacity: 1;
+}
+
+.resize-se {
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nw-resize;
+    background: linear-gradient(135deg, transparent 40%, var(--accent) 40%, var(--accent) 60%, transparent 60%);
+}
+
+/* Drop Zone */
+.drop-zone-indicator {
+    position: absolute;
+    inset: 0;
+    background: rgba(34, 211, 238, 0.1);
+    border: 2px dashed var(--accent);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--accent);
+    font-weight: 600;
+    z-index: 999;
+}
+
+.drop-zone-indicator i {
+    font-size: 2rem;
 }
 
 .metric-grid {
@@ -557,6 +740,186 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.6);
     border-color: rgba(34, 211, 238, 0.4);
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(8px);
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 700px;
+    max-height: 80%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--accent);
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-close {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 8px;
+    color: #ef4444;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.modal-close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+}
+
+.modal-body {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #0f172a;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #0891b2;
+    transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background: rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background: rgba(148, 163, 184, 0.2);
+    border-color: rgba(148, 163, 184, 0.5);
+}
+
+/* Widget Categories */
+.widget-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.category-section h4 {
+    margin: 0 0 16px 0;
+    color: var(--accent);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    padding-bottom: 8px;
+}
+
+.widget-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.widget-option {
+    background: rgba(34, 211, 238, 0.05);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.widget-option:hover {
+    background: rgba(34, 211, 238, 0.1);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.widget-option.selected {
+    background: rgba(34, 211, 238, 0.15);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.3);
+}
+
+.widget-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.widget-preview i {
+    font-size: 1.5rem;
+}
+
+.widget-option p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.4;
 }
 
 .gpu-card::before {

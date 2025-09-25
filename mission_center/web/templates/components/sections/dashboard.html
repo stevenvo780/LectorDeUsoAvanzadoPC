@@ -1,0 +1,11 @@
+<section id="overview" class="interactive-dashboard">
+    {% include 'components/dashboard-toolbar.html' %}
+
+    <!-- Interactive Widget Grid -->
+    <div class="widgets-grid" id="widgets-container">
+        {% include 'components/widgets/cpu-widget.html' %}
+        {% include 'components/widgets/memory-widget.html' %}
+        {% include 'components/widgets/storage-widget.html' %}
+        {% include 'components/widgets/network-widget.html' %}
+    </div>
+</section>

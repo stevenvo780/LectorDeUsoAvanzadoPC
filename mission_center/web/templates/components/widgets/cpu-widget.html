@@ -1,0 +1,40 @@
+<!-- CPU Widget -->
+<div class="widget widget-medium" data-widget-id="cpu" data-widget-type="cpu" draggable="true">
+    <div class="widget-header">
+        <h3><i data-lucide="cpu"></i> CPU</h3>
+        <div class="widget-controls">
+            <button class="widget-btn" data-action="resize" title="Redimensionar">
+                <i data-lucide="maximize-2"></i>
+            </button>
+            <button class="widget-btn" data-action="remove" title="Eliminar">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+    </div>
+    <div class="widget-content">
+        <div class="metric-grid">
+            <div class="metric">
+                <div class="metric-label">Uso Total</div>
+                <div class="metric-value" id="cpu-usage">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Frecuencia</div>
+                <div class="metric-value" id="cpu-freq">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Núcleos Lógicos</div>
+                <div class="metric-value" id="cpu-cores">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Núcleos Físicos</div>
+                <div class="metric-value" id="cpu-physical">--</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="cpuChart"></canvas>
+        </div>
+    </div>
+    <div class="resize-handles">
+        <div class="resize-handle resize-se"></div>
+    </div>
+</div>

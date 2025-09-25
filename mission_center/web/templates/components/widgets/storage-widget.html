@@ -1,0 +1,40 @@
+<!-- Storage Widget -->
+<div class="widget widget-medium" data-widget-id="storage" data-widget-type="storage" draggable="true">
+    <div class="widget-header">
+        <h3><i data-lucide="hard-drive"></i> Almacenamiento</h3>
+        <div class="widget-controls">
+            <button class="widget-btn" data-action="resize" title="Redimensionar">
+                <i data-lucide="maximize-2"></i>
+            </button>
+            <button class="widget-btn" data-action="remove" title="Eliminar">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+    </div>
+    <div class="widget-content">
+        <div class="metric-grid">
+            <div class="metric">
+                <div class="metric-label">Lectura</div>
+                <div class="metric-value" id="disk-read">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Escritura</div>
+                <div class="metric-value" id="disk-write">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Dispositivos</div>
+                <div class="metric-value" id="disk-count">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">E/S total</div>
+                <div class="metric-value" id="io-total">--</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="diskChart"></canvas>
+        </div>
+    </div>
+    <div class="resize-handles">
+        <div class="resize-handle resize-se"></div>
+    </div>
+</div>

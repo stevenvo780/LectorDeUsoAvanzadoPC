@@ -1,12 +1,6 @@
 <!DOCTYPE html>
 <!--
-Mission Center Web Interface
-Icons: Migrated from emoji icons to Lucide Icons (https://lucide.dev/) for professional appearance
-Implementation: 
-- Lucide Icons CDN loaded via unpkg
-- Icons rendered via <i data-lucide="icon-name"> elements
-- JavaScript initialization: lucide.createIcons() on DOMContentLoaded
-- Complete icon replacement across all navigation and section headers
+Mission Center Web Interface - Modular Components Version
 -->
 <html lang="es">
 <head>
@@ -41,9 +35,9 @@ Implementation:
             <i data-lucide="settings"></i> Sistema
         </div>
     </aside>
-
+    
     <main class="main-content">
-
+        <!-- Dashboard Section -->
         <section id="overview" class="interactive-dashboard">
             <!-- Dashboard Toolbar -->
             <div class="dashboard-toolbar">
@@ -229,107 +223,9 @@ Implementation:
                     </div>
                 </div>
             </div>
-
-            <!-- Drop Zone Indicator -->
-            <div class="drop-zone-indicator" id="drop-indicator" style="display: none;">
-                <i data-lucide="plus"></i>
-                <span>Soltar widget aquí</span>
-            </div>
         </section>
 
-        <!-- Widget Selection Modal -->
-        <div class="modal" id="widget-selector-modal" style="display: none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3><i data-lucide="plus-square"></i> Añadir Nuevo Widget</h3>
-                    <button class="modal-close" id="close-widget-modal">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="widget-categories">
-                        <div class="category-section">
-                            <h4><i data-lucide="activity"></i> Rendimiento</h4>
-                            <div class="widget-options">
-                                <div class="widget-option" data-widget-type="cpu">
-                                    <div class="widget-preview">
-                                        <i data-lucide="cpu"></i>
-                                        <span>CPU</span>
-                                    </div>
-                                    <p>Monitoreo de procesador en tiempo real</p>
-                                </div>
-                                <div class="widget-option" data-widget-type="memory">
-                                    <div class="widget-preview">
-                                        <i data-lucide="memory-stick"></i>
-                                        <span>Memoria</span>
-                                    </div>
-                                    <p>RAM y Swap del sistema</p>
-                                </div>
-                                <div class="widget-option" data-widget-type="gpu">
-                                    <div class="widget-preview">
-                                        <i data-lucide="zap"></i>
-                                        <span>GPU</span>
-                                    </div>
-                                    <p>Tarjetas gráficas del sistema</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="category-section">
-                            <h4><i data-lucide="hard-drive"></i> Almacenamiento & Red</h4>
-                            <div class="widget-options">
-                                <div class="widget-option" data-widget-type="storage">
-                                    <div class="widget-preview">
-                                        <i data-lucide="hard-drive"></i>
-                                        <span>Almacenamiento</span>
-                                    </div>
-                                    <p>Actividad de discos y E/S</p>
-                                </div>
-                                <div class="widget-option" data-widget-type="network">
-                                    <div class="widget-preview">
-                                        <i data-lucide="network"></i>
-                                        <span>Red</span>
-                                    </div>
-                                    <p>Tráfico de red e interfaces</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="category-section">
-                            <h4><i data-lucide="list"></i> Procesos & Sistema</h4>
-                            <div class="widget-options">
-                                <div class="widget-option" data-widget-type="processes">
-                                    <div class="widget-preview">
-                                        <i data-lucide="list"></i>
-                                        <span>Procesos</span>
-                                    </div>
-                                    <p>Procesos activos del sistema</p>
-                                </div>
-                                <div class="widget-option" data-widget-type="sensors">
-                                    <div class="widget-preview">
-                                        <i data-lucide="thermometer"></i>
-                                        <span>Sensores</span>
-                                    </div>
-                                    <p>Temperaturas y ventiladores</p>
-                                </div>
-                                <div class="widget-option" data-widget-type="system-info">
-                                    <div class="widget-preview">
-                                        <i data-lucide="info"></i>
-                                        <span>Sistema</span>
-                                    </div>
-                                    <p>Información del sistema</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" id="cancel-widget-add">Cancelar</button>
-                    <button class="btn btn-primary" id="confirm-widget-add" disabled>Añadir Widget</button>
-                </div>
-            </div>
-        </div>
-
+        <!-- Performance Section -->
         <section id="performance" class="hidden">
             <article class="card full-width">
                 <h3><i data-lucide="flame"></i> CPU por núcleo</h3>
@@ -349,9 +245,10 @@ Implementation:
             </article>
         </section>
 
+        <!-- Analytics Section -->
         <section id="analytics" class="hidden">
             <article class="card full-width">
-                <h3>💽 Actividad de discos</h3>
+                <h3><i data-lucide="bar-chart-3"></i> Actividad de discos</h3>
                 <div class="chart-container">
                     <canvas id="diskReadChart"></canvas>
                 </div>
@@ -361,6 +258,7 @@ Implementation:
             </article>
         </section>
 
+        <!-- Processes Section -->
         <section id="processes" class="hidden">
             <div class="process-table">
                 <div class="table-header">
@@ -374,6 +272,7 @@ Implementation:
             </div>
         </section>
 
+        <!-- Sensors Section -->
         <section id="sensors" class="hidden">
             <article class="card">
                 <h3><i data-lucide="thermometer"></i> Temperaturas</h3>
@@ -404,6 +303,7 @@ Implementation:
             </article>
         </section>
 
+        <!-- System Section -->
         <section id="system" class="hidden">
             <article class="card">
                 <h3><i data-lucide="link"></i> Estado de Conexión</h3>
@@ -451,10 +351,111 @@ Implementation:
         </section>
     </main>
 
+    <!-- Widget Selection Modal -->
+    <div class="modal" id="widget-selector-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="plus-square"></i> Añadir Nuevo Widget</h3>
+                <button class="modal-close" id="close-widget-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="widget-categories">
+                    <div class="category-section">
+                        <h4><i data-lucide="activity"></i> Rendimiento</h4>
+                        <div class="widget-options">
+                            <div class="widget-option" data-widget-type="cpu">
+                                <div class="widget-preview">
+                                    <i data-lucide="cpu"></i>
+                                    <span>CPU</span>
+                                </div>
+                                <p>Monitoreo de procesador en tiempo real</p>
+                            </div>
+                            <div class="widget-option" data-widget-type="memory">
+                                <div class="widget-preview">
+                                    <i data-lucide="memory-stick"></i>
+                                    <span>Memoria</span>
+                                </div>
+                                <p>RAM y Swap del sistema</p>
+                            </div>
+                            <div class="widget-option" data-widget-type="gpu">
+                                <div class="widget-preview">
+                                    <i data-lucide="zap"></i>
+                                    <span>GPU</span>
+                                </div>
+                                <p>Tarjetas gráficas del sistema</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="category-section">
+                        <h4><i data-lucide="hard-drive"></i> Almacenamiento & Red</h4>
+                        <div class="widget-options">
+                            <div class="widget-option" data-widget-type="storage">
+                                <div class="widget-preview">
+                                    <i data-lucide="hard-drive"></i>
+                                    <span>Almacenamiento</span>
+                                </div>
+                                <p>Actividad de discos y E/S</p>
+                            </div>
+                            <div class="widget-option" data-widget-type="network">
+                                <div class="widget-preview">
+                                    <i data-lucide="network"></i>
+                                    <span>Red</span>
+                                </div>
+                                <p>Tráfico de red e interfaces</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="category-section">
+                        <h4><i data-lucide="list"></i> Procesos & Sistema</h4>
+                        <div class="widget-options">
+                            <div class="widget-option" data-widget-type="processes">
+                                <div class="widget-preview">
+                                    <i data-lucide="list"></i>
+                                    <span>Procesos</span>
+                                </div>
+                                <p>Procesos activos del sistema</p>
+                            </div>
+                            <div class="widget-option" data-widget-type="sensors">
+                                <div class="widget-preview">
+                                    <i data-lucide="thermometer"></i>
+                                    <span>Sensores</span>
+                                </div>
+                                <p>Temperaturas y ventiladores</p>
+                            </div>
+                            <div class="widget-option" data-widget-type="system-info">
+                                <div class="widget-preview">
+                                    <i data-lucide="info"></i>
+                                    <span>Sistema</span>
+                                </div>
+                                <p>Información del sistema</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-widget-add">Cancelar</button>
+                <button class="btn btn-primary" id="confirm-widget-add" disabled>Añadir Widget</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drop Zone Indicator -->
+    <div class="drop-zone-indicator" id="drop-indicator" style="display: none;">
+        <i data-lucide="plus"></i>
+        <span>Soltar widget aquí</span>
+    </div>
+
     <script>
         // Initialize Lucide icons after page load
         document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
         });
     </script>
 </body>

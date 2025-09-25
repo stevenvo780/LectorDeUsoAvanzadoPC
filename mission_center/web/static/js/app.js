@@ -1016,9 +1016,456 @@ function updateIODeviceCardData(card, deviceName, stats) {
     }
 }
 
+// Interactive Dashboard System
+class InteractiveDashboard {
+    constructor() {
+        this.widgetsContainer = document.getElementById('widgets-container');
+        this.dropIndicator = document.getElementById('drop-indicator');
+        this.widgetModal = document.getElementById('widget-selector-modal');
+        this.selectedWidgetType = null;
+        this.draggedWidget = null;
+        this.isResizing = false;
+        this.currentResizeWidget = null;
+
+        // Widget templates
+        this.widgetTemplates = {
+            cpu: {
+                icon: 'cpu',
+                title: 'CPU',
+                metrics: ['cpu-usage', 'cpu-freq', 'cpu-cores', 'cpu-physical'],
+                chartId: 'cpuChart'
+            },
+            memory: {
+                icon: 'memory-stick',
+                title: 'Memoria',
+                metrics: ['mem-usage', 'mem-total', 'swap-usage', 'swap-total'],
+                chartId: 'memoryChart'
+            },
+            storage: {
+                icon: 'hard-drive',
+                title: 'Almacenamiento',
+                metrics: ['disk-read', 'disk-write', 'disk-count', 'io-total'],
+                chartId: 'diskChart'
+            },
+            network: {
+                icon: 'network',
+                title: 'Red',
+                metrics: ['net-sent', 'net-recv', 'net-interfaces', 'gpu-count'],
+                chartId: 'networkChart'
+            },
+            gpu: {
+                icon: 'zap',
+                title: 'GPU',
+                metrics: ['gpu-usage', 'gpu-memory', 'gpu-temp', 'gpu-power'],
+                chartId: 'gpuChart'
+            },
+            processes: {
+                icon: 'list',
+                title: 'Procesos',
+                metrics: ['process-count', 'cpu-processes', 'memory-processes'],
+                chartId: 'processChart'
+            },
+            sensors: {
+                icon: 'thermometer',
+                title: 'Sensores',
+                metrics: ['cpu-temp', 'gpu-temp', 'fan-speed', 'voltage'],
+                chartId: 'sensorsChart'
+            },
+            'system-info': {
+                icon: 'info',
+                title: 'Sistema',
+                metrics: ['uptime', 'boot-time', 'users', 'os-info'],
+                chartId: null
+            }
+        };
+
+        this.initEventListeners();
+        this.loadLayoutFromStorage();
+    }
+
+    initEventListeners() {
+        // Toolbar buttons
+        document.getElementById('add-widget-btn')?.addEventListener('click', () => this.openWidgetModal());
+        document.getElementById('layout-reset-btn')?.addEventListener('click', () => this.resetLayout());
+        document.getElementById('dashboard-settings-btn')?.addEventListener('click', () => this.openSettings());
+
+        // Modal events
+        document.getElementById('close-widget-modal')?.addEventListener('click', () => this.closeWidgetModal());
+        document.getElementById('cancel-widget-add')?.addEventListener('click', () => this.closeWidgetModal());
+        document.getElementById('confirm-widget-add')?.addEventListener('click', () => this.addSelectedWidget());
+
+        // Widget option selection
+        document.querySelectorAll('.widget-option').forEach(option => {
+            option.addEventListener('click', (e) => this.selectWidgetType(e));
+        });
+
+        // Global drag and drop events
+        document.addEventListener('dragstart', (e) => this.handleDragStart(e));
+        document.addEventListener('dragover', (e) => this.handleDragOver(e));
+        document.addEventListener('drop', (e) => this.handleDrop(e));
+        document.addEventListener('dragend', (e) => this.handleDragEnd(e));
+
+        // Global resize events
+        document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+
+        // Close modal on outside click
+        this.widgetModal?.addEventListener('click', (e) => {
+            if (e.target === this.widgetModal) {
+                this.closeWidgetModal();
+            }
+        });
+    }
+
+    openWidgetModal() {
+        this.widgetModal.style.display = 'flex';
+        this.selectedWidgetType = null;
+        this.updateAddButton();
+        // Clear previous selections
+        document.querySelectorAll('.widget-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+    }
+
+    closeWidgetModal() {
+        this.widgetModal.style.display = 'none';
+    }
+
+    selectWidgetType(e) {
+        document.querySelectorAll('.widget-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        e.currentTarget.classList.add('selected');
+        this.selectedWidgetType = e.currentTarget.dataset.widgetType;
+        this.updateAddButton();
+    }
+
+    updateAddButton() {
+        const addButton = document.getElementById('confirm-widget-add');
+        addButton.disabled = !this.selectedWidgetType;
+    }
+
+    addSelectedWidget() {
+        if (!this.selectedWidgetType) return;
+
+        const widgetId = `widget-${Date.now()}`;
+        const template = this.widgetTemplates[this.selectedWidgetType];
+        
+        const widgetHtml = this.generateWidgetHtml(widgetId, this.selectedWidgetType, template);
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = widgetHtml;
+        const newWidget = tempDiv.firstElementChild;
+        
+        this.widgetsContainer.appendChild(newWidget);
+        this.initWidget(newWidget);
+        
+        // Re-initialize any charts if needed
+        if (template.chartId) {
+            this.initWidgetChart(newWidget, template.chartId);
+        }
+        
+        this.saveLayoutToStorage();
+        this.closeWidgetModal();
+
+        // Re-initialize Lucide icons for the new widget
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+
+    generateWidgetHtml(widgetId, widgetType, template) {
+        const metricsHtml = template.metrics.map(metricId => {
+            const [category, metric] = metricId.split('-');
+            return `
+                <div class="metric">
+                    <div class="metric-label">${this.getMetricLabel(metricId)}</div>
+                    <div class="metric-value" id="${metricId}">--</div>
+                </div>
+            `;
+        }).join('');
+
+        const chartHtml = template.chartId ? `
+            <div class="chart-container">
+                <canvas id="${template.chartId}"></canvas>
+            </div>
+        ` : '';
+
+        return `
+            <div class="widget widget-medium" data-widget-id="${widgetId}" data-widget-type="${widgetType}" draggable="true">
+                <div class="widget-header">
+                    <h3><i data-lucide="${template.icon}"></i> ${template.title}</h3>
+                    <div class="widget-controls">
+                        <button class="widget-btn" data-action="resize" title="Redimensionar">
+                            <i data-lucide="maximize-2"></i>
+                        </button>
+                        <button class="widget-btn" data-action="remove" title="Eliminar">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="metric-grid">
+                        ${metricsHtml}
+                    </div>
+                    ${chartHtml}
+                </div>
+                <div class="resize-handles">
+                    <div class="resize-handle resize-se"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    getMetricLabel(metricId) {
+        const labels = {
+            'cpu-usage': 'Uso Total',
+            'cpu-freq': 'Frecuencia',
+            'cpu-cores': 'Núcleos Lógicos',
+            'cpu-physical': 'Núcleos Físicos',
+            'mem-usage': 'RAM usada',
+            'mem-total': 'RAM total',
+            'swap-usage': 'Swap usada',
+            'swap-total': 'Swap total',
+            'disk-read': 'Lectura',
+            'disk-write': 'Escritura',
+            'disk-count': 'Dispositivos',
+            'io-total': 'E/S total',
+            'net-sent': 'Subida',
+            'net-recv': 'Bajada',
+            'net-interfaces': 'Interfaces',
+            'gpu-count': 'GPUs'
+        };
+        return labels[metricId] || metricId;
+    }
+
+    initWidget(widget) {
+        // Add remove functionality
+        const removeBtn = widget.querySelector('[data-action="remove"]');
+        removeBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.removeWidget(widget);
+        });
+
+        // Add resize functionality
+        const resizeBtn = widget.querySelector('[data-action="resize"]');
+        resizeBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleWidgetSize(widget);
+        });
+    }
+
+    removeWidget(widget) {
+        if (confirm('¿Estás seguro de que quieres eliminar este widget?')) {
+            widget.remove();
+            this.saveLayoutToStorage();
+        }
+    }
+
+    toggleWidgetSize(widget) {
+        const currentSize = widget.classList.contains('widget-large') ? 'large' : 
+                          widget.classList.contains('widget-small') ? 'small' : 'medium';
+        
+        widget.classList.remove('widget-small', 'widget-medium', 'widget-large');
+        
+        switch (currentSize) {
+            case 'small':
+                widget.classList.add('widget-medium');
+                break;
+            case 'medium':
+                widget.classList.add('widget-large');
+                break;
+            case 'large':
+                widget.classList.add('widget-small');
+                break;
+        }
+        
+        this.saveLayoutToStorage();
+    }
+
+    // Drag and Drop functionality
+    handleDragStart(e) {
+        if (!e.target.classList.contains('widget')) return;
+        
+        this.draggedWidget = e.target;
+        e.target.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        if (this.draggedWidget) {
+            this.showDropIndicator(e);
+        }
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+        this.hideDropIndicator();
+        
+        if (!this.draggedWidget) return;
+        
+        const targetWidget = e.target.closest('.widget');
+        if (targetWidget && targetWidget !== this.draggedWidget) {
+            // Insert before target widget
+            this.widgetsContainer.insertBefore(this.draggedWidget, targetWidget);
+            this.saveLayoutToStorage();
+        }
+    }
+
+    handleDragEnd(e) {
+        if (e.target.classList.contains('widget')) {
+            e.target.classList.remove('dragging');
+        }
+        this.draggedWidget = null;
+        this.hideDropIndicator();
+    }
+
+    showDropIndicator(e) {
+        const rect = this.widgetsContainer.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        this.dropIndicator.style.display = 'flex';
+        this.dropIndicator.style.left = `${Math.max(0, x - 150)}px`;
+        this.dropIndicator.style.top = `${Math.max(0, y - 75)}px`;
+        this.dropIndicator.style.width = '300px';
+        this.dropIndicator.style.height = '150px';
+    }
+
+    hideDropIndicator() {
+        this.dropIndicator.style.display = 'none';
+    }
+
+    // Resize functionality
+    handleMouseDown(e) {
+        if (e.target.classList.contains('resize-handle')) {
+            this.isResizing = true;
+            this.currentResizeWidget = e.target.closest('.widget');
+            this.currentResizeWidget.classList.add('resizing');
+            e.preventDefault();
+        }
+    }
+
+    handleMouseMove(e) {
+        if (!this.isResizing || !this.currentResizeWidget) return;
+        
+        // Simple resize implementation - could be enhanced
+        const rect = this.currentResizeWidget.getBoundingClientRect();
+        const minWidth = 300;
+        const minHeight = 200;
+        
+        const newWidth = Math.max(minWidth, e.clientX - rect.left);
+        const newHeight = Math.max(minHeight, e.clientY - rect.top);
+        
+        this.currentResizeWidget.style.width = `${newWidth}px`;
+        this.currentResizeWidget.style.height = `${newHeight}px`;
+    }
+
+    handleMouseUp(e) {
+        if (this.isResizing) {
+            this.isResizing = false;
+            if (this.currentResizeWidget) {
+                this.currentResizeWidget.classList.remove('resizing');
+                this.saveLayoutToStorage();
+                this.currentResizeWidget = null;
+            }
+        }
+    }
+
+    // Layout persistence
+    saveLayoutToStorage() {
+        const widgets = Array.from(this.widgetsContainer.querySelectorAll('.widget')).map(widget => ({
+            id: widget.dataset.widgetId,
+            type: widget.dataset.widgetType,
+            size: widget.classList.contains('widget-large') ? 'large' : 
+                  widget.classList.contains('widget-small') ? 'small' : 'medium',
+            style: {
+                width: widget.style.width || '',
+                height: widget.style.height || ''
+            }
+        }));
+        
+        localStorage.setItem('dashboard-layout', JSON.stringify(widgets));
+    }
+
+    loadLayoutFromStorage() {
+        const saved = localStorage.getItem('dashboard-layout');
+        if (!saved) return;
+        
+        try {
+            const layout = JSON.parse(saved);
+            
+            // Only add widgets that don't already exist
+            layout.forEach(widgetData => {
+                const existing = document.querySelector(`[data-widget-id="${widgetData.id}"]`);
+                if (existing) return;
+                
+                const template = this.widgetTemplates[widgetData.type];
+                if (!template) return;
+                
+                const widgetHtml = this.generateWidgetHtml(widgetData.id, widgetData.type, template);
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = widgetHtml;
+                const newWidget = tempDiv.firstElementChild;
+                
+                // Apply saved size and style
+                newWidget.classList.remove('widget-small', 'widget-medium', 'widget-large');
+                newWidget.classList.add(`widget-${widgetData.size}`);
+                
+                if (widgetData.style.width) newWidget.style.width = widgetData.style.width;
+                if (widgetData.style.height) newWidget.style.height = widgetData.style.height;
+                
+                this.widgetsContainer.appendChild(newWidget);
+                this.initWidget(newWidget);
+            });
+            
+            // Re-initialize Lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        } catch (e) {
+            console.warn('Failed to load dashboard layout:', e);
+        }
+    }
+
+    resetLayout() {
+        if (confirm('¿Estás seguro de que quieres resetear el layout del dashboard?')) {
+            localStorage.removeItem('dashboard-layout');
+            location.reload();
+        }
+    }
+
+    openSettings() {
+        alert('Configuración del dashboard - Próximamente');
+    }
+
+    initWidgetChart(widget, chartId) {
+        // This would integrate with the existing chart initialization
+        // For now, just ensure the chart gets created if it exists in the global charts object
+        const canvas = widget.querySelector(`#${chartId}`);
+        if (canvas && typeof Chart !== 'undefined') {
+            // Chart initialization would happen here
+            // This integrates with existing chart logic
+            console.log(`Initializing chart ${chartId} for widget`);
+        }
+    }
+}
+
+// Initialize dashboard when DOM is ready
+let interactiveDashboard;
+
 function bootstrap() {
     initNavigation();
     initCharts();
+    
+    // Initialize interactive dashboard
+    interactiveDashboard = new InteractiveDashboard();
+    
     showSection(currentSection);
     updateLoop();
     setInterval(updateLoop, 1000);

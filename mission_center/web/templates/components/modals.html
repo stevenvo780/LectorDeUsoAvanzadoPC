@@ -1,0 +1,98 @@
+<!-- Widget Selection Modal -->
+<div class="modal" id="widget-selector-modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i data-lucide="plus-square"></i> Añadir Nuevo Widget</h3>
+            <button class="modal-close" id="close-widget-modal">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="widget-categories">
+                <div class="category-section">
+                    <h4><i data-lucide="activity"></i> Rendimiento</h4>
+                    <div class="widget-options">
+                        <div class="widget-option" data-widget-type="cpu">
+                            <div class="widget-preview">
+                                <i data-lucide="cpu"></i>
+                                <span>CPU</span>
+                            </div>
+                            <p>Monitoreo de procesador en tiempo real</p>
+                        </div>
+                        <div class="widget-option" data-widget-type="memory">
+                            <div class="widget-preview">
+                                <i data-lucide="memory-stick"></i>
+                                <span>Memoria</span>
+                            </div>
+                            <p>RAM y Swap del sistema</p>
+                        </div>
+                        <div class="widget-option" data-widget-type="gpu">
+                            <div class="widget-preview">
+                                <i data-lucide="zap"></i>
+                                <span>GPU</span>
+                            </div>
+                            <p>Tarjetas gráficas del sistema</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-section">
+                    <h4><i data-lucide="hard-drive"></i> Almacenamiento & Red</h4>
+                    <div class="widget-options">
+                        <div class="widget-option" data-widget-type="storage">
+                            <div class="widget-preview">
+                                <i data-lucide="hard-drive"></i>
+                                <span>Almacenamiento</span>
+                            </div>
+                            <p>Actividad de discos y E/S</p>
+                        </div>
+                        <div class="widget-option" data-widget-type="network">
+                            <div class="widget-preview">
+                                <i data-lucide="network"></i>
+                                <span>Red</span>
+                            </div>
+                            <p>Tráfico de red e interfaces</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-section">
+                    <h4><i data-lucide="list"></i> Procesos & Sistema</h4>
+                    <div class="widget-options">
+                        <div class="widget-option" data-widget-type="processes">
+                            <div class="widget-preview">
+                                <i data-lucide="list"></i>
+                                <span>Procesos</span>
+                            </div>
+                            <p>Procesos activos del sistema</p>
+                        </div>
+                        <div class="widget-option" data-widget-type="sensors">
+                            <div class="widget-preview">
+                                <i data-lucide="thermometer"></i>
+                                <span>Sensores</span>
+                            </div>
+                            <p>Temperaturas y ventiladores</p>
+                        </div>
+                        <div class="widget-option" data-widget-type="system-info">
+                            <div class="widget-preview">
+                                <i data-lucide="info"></i>
+                                <span>Sistema</span>
+                            </div>
+                            <p>Información del sistema</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancel-widget-add">Cancelar</button>
+            <button class="btn btn-primary" id="confirm-widget-add" disabled>Añadir Widget</button>
+        </div>
+    </div>
+</div>
+
+<!-- Drop Zone Indicator -->
+<div class="drop-zone-indicator" id="drop-indicator" style="display: none;">
+    <i data-lucide="plus"></i>
+    <span>Soltar widget aquí</span>
+</div>

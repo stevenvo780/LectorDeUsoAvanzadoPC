@@ -1,0 +1,23 @@
+{% extends 'components/base.html' %}
+
+{% block title %}Mission Center · Web{% endblock %}
+
+{% block content %}
+    {% include 'components/sections/dashboard.html' %}
+    {% include 'components/sections/performance.html' %}
+    {% include 'components/sections/analytics.html' %}
+    {% include 'components/sections/processes.html' %}
+    {% include 'components/sections/sensors.html' %}
+    {% include 'components/sections/system.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Initialize Lucide icons after page load
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
+{% endblock %}
