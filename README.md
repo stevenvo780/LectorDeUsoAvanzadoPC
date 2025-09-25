@@ -1,110 +1,80 @@
-# Mission Center Clone - Monitor de Sistema
+# Mission Center Web
 
-Monitor avanzado estilo Mission Center de Windows, construido en PySide6 con cobertura total de sensores de hardware y paneles en tiempo real.
+Monitor avanzado estilo Mission Center de Windows, reconstruido como aplicación web pura sobre Python + psutil. Ofrece paneles en tiempo real, históricos deslizantes y vistas detalladas para CPU, memoria, GPU, almacenamiento, red, procesos, sensores y sistema.
 
-## 🚀 Ejecución rápida
+## 🚀 Inicio rápido
+
 ```bash
-python -m mission_center_clone.app
-```
-> Para entornos sin pantalla física: `QT_QPA_PLATFORM=offscreen python scripts/smoke.py`
-
-## ✨ Qué incluye ahora
-- **🔥 CPU**: uso instantáneo, núcleos individuales, frecuencias y promedios de carga.
-- **💾 Memoria**: RAM + swap con métricas agregadas y gráficas históricas.
-- **💽 Almacenamiento**: lecturas/escrituras por dispositivo, montajes y espacio disponible.
-- **🌐 Red**: interfaces activas, throughput en tiempo real y autodetección de IPs.
-- **📊 Procesos**: tabla ordenable por CPU/RAM con IO y comando completo.
-- **🎮 GPU / PCIe**: métricas NVML opcionales, enlaces PCIe actuales y máximos.
-- **🌡️ Sensores**: temperaturas agrupadas por origen, ventiladores, batería, fuentes de poder.
-- **🖥️ Sistema**: ficha completa (OS, kernel, BIOS, placa base, chasis, virtualización, GPUs).
-- **📈 Históricos**: gráficos rolling window para CPU, GPU, IO, temperatura y ventiladores.
-
-## 🎯 Interfaz tipo Mission Center
-- Barra lateral con secciones: Panel, Procesos, Rendimiento, Sensores y Sistema.
-- Tarjetas compactas con estado resumido y mensajes claros cuando faltan datos.
-- Tabs de rendimiento por recurso con gráficos en vivo (Qt Charts).
-- Vistas especializadas para sensores con tablas dinámicas y gráficas de máximos/promedios.
-- Tema oscuro inspirado en Fluent Design; estilizable desde `core/theme.py`.
-
-## 📦 **Requisitos**
-```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+python -m mission_center.web.server
 ```
 
-## 📁 **Estructura**
+La consola mostrará la URL local (por defecto `http://127.0.0.1:8080`). Abre esa dirección en el navegador para acceder al tablero.
+
+## ✨ Características principales
+
+- **Panel general** con tarjetas para CPU, memoria, discos y red, junto a gráficos históricos.
+- **Rendimiento**: tarjetas individuales por núcleo con mini-gráficas embebidas y resumen de GPU.
+- **Analítica**: gráfico multiserie para todos los núcleos y series independientes de lectura/escritura de discos.
+- **Procesos**: tabla dinámica top-N por CPU con memoria y usuario.
+- **Sensores**: temperaturas agrupadas, RPM de ventiladores y estado de alimentación (batería y fuentes).
+- **Ficha del sistema**: datos de hardware, firmware y uptime más la tabla completa de enlaces PCIe.
+- **Históricos deslizantes** para CPU, memoria, IO, red, temperatura y ventiladores.
+
+Todos los datos provienen de los colectores existentes (`mission_center.data`), compartidos con la versión de escritorio original.
+
+## 🧱 Arquitectura
+
 ```
-mission_center_clone/         # Paquete Python con colectores
-mission_center_advanced.py    # Legacy: servidor web/SPA opcional
-requirements.txt              # Dependencias mínimas
-docs/                         # Documentación técnica
+mission_center/
+  core/               # Configuración, temas y utilidades de actualización
+  data/               # Colectores basados en psutil y utilidades opcionales
+  models/             # Dataclasses con la forma de las instantáneas
+  web/
+    collector.py      # Hilo de adquisición y almacenamiento de históricos
+    server.py         # Servidor HTTP con endpoints REST + assets estáticos
+    templates/
+      index.html      # Shell de la SPA
+    static/
+      css/styles.css  # Tema Fluent dark
+      js/app.js       # Lógica de la interfaz (Chart.js, navegación, renders)
+requirements.txt      # Solo psutil (dependencias opcionales documentadas en el código)
 ```
 
-## 🔧 Arquitectura
-- **Qt Widgets**: UI nativa en PySide6 (sin servidor web).
-- **Coordinador**: `DataUpdateCoordinator` orquesta los proveedores en intervalos independientes.
-- **Modelo de datos**: dataclasses inmutables para snapshots (CPU, sensores, sistema, etc.).
-- **Colectores**: psutil como base, opcionales `pynvml`/`pyudev` para GPU/PCIe.
+El servidor se basa en `http.server` y expone:
+- `/` → HTML principal.
+- `/static/*` → assets.
+- `/api/current` → snapshot actual completo.
+- `/api/history` → históricos en ventanas configurables.
 
-## 🌐 **Acceso**
-Una vez ejecutado, accede a **http://localhost:8081** para ver la interfaz completa estilo Windows con monitoreo en tiempo real del sistema.
+## 🛠️ Configuración
 
-## Características
-- **Panel general** con 11 tarjetas (CPU, memoria, GPU, discos, red, IO, PCIe, temperatura, ventiladores, batería, energía, sistema).
-- **Gestor de procesos** con ordenamiento por consumo y métricas de IO por proceso.
-- **Pestañas de rendimiento** por categoría, replicando la navegación del Mission Center.
-- **Vista de sensores** con tabs para temperaturas, ventiladores y energía (batería/fuentes).
-- **Ficha del sistema** con BIOS, fabricante, chasis, uptime, virtualización y GPUs.
-- Arquitectura modular para ampliar proveedores o sustituir la UI sin cambiar colectores.
-
-## Requisitos
-- Python 3.10+ (probado en 3.10/3.11).
-- Dependencias de sistema para Qt (Linux):
-  - libxcb, libxkbcommon, libxcb-cursor0 (o xcb-cursor0), libxrender, libxcomposite, libxi, libx11-xcb, etc. En Debian/Ubuntu:
-    ```bash
-    sudo apt-get update
-    sudo apt-get install -y libxkbcommon-x11-0 libxrender1 libxcomposite1 libxi6 libxcb-cursor0
-    ```
-- Dependencias Python (pip):
-  ```bash
-  pip install -r requirements.txt
-  ```
-- Dependencias opcionales para métricas extendidas:
+- Python **3.10+**.
+- Dependencias del sistema para sensores opcionales (`lm-sensors`, `smartmontools`, drivers NVML, etc.).
+- Dependencias Python opcionales para ampliar métricas:
   ```bash
   pip install pynvml pyudev
   ```
-- Acceso a `/sys` y utilidades como `lm-sensors`, `smartmontools` y drivers NVML mejoran la cobertura de datos.
 
-## Ejecución
-1. Crear y activar un entorno virtual (opcional pero recomendado).
-2. Instalar dependencias.
-3. Ejecutar la aplicación (requiere entorno gráfico disponible):
-   ```bash
-   python -m mission_center_clone.app
-   ```
+## 📐 Diseño UI
 
-### Modo headless (pruebas rápidas)
-- Smoke test de imports/creación de UI (offscreen):
-  ```bash
-  QT_QPA_PLATFORM=offscreen python scripts/smoke.py
-  ```
-- Loop de 3s del event loop (offscreen):
-  ```bash
-  QT_QPA_PLATFORM=offscreen python scripts/run_headless.py
-  ```
+- Tema oscuro inspirado en Fluent/Windows 11.
+- Navegación lateral con secciones conmutables (`Resumen`, `Rendimiento`, `Analítica`, `Procesos`, `Sensores`, `Sistema`).
+- Tarjetas con valores destacados, etiquetas secundarias y mini-charts por núcleo.
+- Chart.js 4 para las series temporales y visualizaciones agregadas.
 
-## Estructura
-- `mission_center_clone/app.py`: punto de entrada Qt.
-- `mission_center_clone/core/`: configuración, tema y coordinador de actualizaciones.
-- `mission_center_clone/data/`: proveedores de datos (CPU, GPU, IO, PCIe, procesos, etc.).
-- `mission_center_clone/models/`: dataclasses con las instantáneas de recursos.
-- `mission_center_clone/ui/`: componentes Qt que replican el flujo del Mission Center.
-- `docs/architecture.md`: detalle de alcance, arquitectura y limitaciones.
+## ✅ Validación
 
-## Próximos pasos sugeridos
-- Integrar gráficas en tiempo real (Qt Charts o PyQtGraph).
-- Añadir agrupación de procesos por aplicación/paquete.
-- Implementar «App health» y tareas en segundo plano como en Mission Center.
-- Persistir histórico para comparar periodos largos y exportar datos.
-- Adaptar estilos a Fluent Design con QML o temas personalizados.
+El proyecto incluye un modo de recogida continua; al cerrar el servidor, el hilo de adquisición se detiene limpiamente. Ejecuta:
 
-> Nota: algunas métricas dependen de soporte del hardware y del kernel. El código maneja faltantes mostrando mensajes informativos en la UI.
+```bash
+python -m compileall mission_center
+```
+
+para validar la sintaxis de los módulos.
+
+## 📄 Nota histórica
+
+La UI basada en PySide6 se retiró en favor de la versión web. Se eliminaron los módulos Qt y los recursos asociados; los colectores y modelos viven ahora en `mission_center.data` y `mission_center.models`, por lo que las dependencias de PySide ya no son necesarias.

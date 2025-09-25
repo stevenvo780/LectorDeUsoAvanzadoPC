@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mission Center · Web</title>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+    <script src="/static/js/app.js" type="module" defer></script>
+</head>
+<body>
+    <aside class="sidebar">
+        <h2>🖥️ Mission Center</h2>
+        <div class="nav-item active" data-section="overview">📊 Resumen</div>
+        <div class="nav-item" data-section="performance">⚡ Rendimiento</div>
+        <div class="nav-item" data-section="analytics">📈 Analítica</div>
+        <div class="nav-item" data-section="processes">🔄 Procesos</div>
+        <div class="nav-item" data-section="sensors">🌡️ Sensores</div>
+        <div class="nav-item" data-section="system">⚙️ Sistema</div>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <h1>Monitor del Sistema</h1>
+            <div class="status-bar">
+                <span id="status-text">Conectando...</span>
+                <span id="last-update">--:--:--</span>
+            </div>
+        </header>
+
+        <section id="overview" class="dashboard">
+            <article class="card">
+                <h3>🔥 CPU</h3>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <div class="metric-label">Uso Total</div>
+                        <div class="metric-value" id="cpu-usage">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Frecuencia</div>
+                        <div class="metric-value" id="cpu-freq">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Núcleos Lógicos</div>
+                        <div class="metric-value" id="cpu-cores">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Núcleos Físicos</div>
+                        <div class="metric-value" id="cpu-physical">--</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="cpuChart"></canvas>
+                </div>
+            </article>
+
+            <article class="card">
+                <h3>💾 Memoria</h3>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <div class="metric-label">RAM usada</div>
+                        <div class="metric-value" id="mem-usage">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">RAM total</div>
+                        <div class="metric-value" id="mem-total">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Swap usada</div>
+                        <div class="metric-value" id="swap-usage">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Swap total</div>
+                        <div class="metric-value" id="swap-total">--</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="memoryChart"></canvas>
+                </div>
+            </article>
+
+            <article class="card">
+                <h3>💽 Almacenamiento</h3>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <div class="metric-label">Lectura</div>
+                        <div class="metric-value" id="disk-read">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Escritura</div>
+                        <div class="metric-value" id="disk-write">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Dispositivos</div>
+                        <div class="metric-value" id="disk-count">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">E/S total</div>
+                        <div class="metric-value" id="io-total">--</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="diskChart"></canvas>
+                </div>
+            </article>
+
+            <article class="card">
+                <h3>🌐 Red</h3>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <div class="metric-label">Subida</div>
+                        <div class="metric-value" id="net-sent">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Bajada</div>
+                        <div class="metric-value" id="net-recv">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Interfaces</div>
+                        <div class="metric-value" id="net-interfaces">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">GPUs</div>
+                        <div class="metric-value" id="gpu-count">--</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="networkChart"></canvas>
+                </div>
+            </article>
+        </section>
+
+        <section id="performance" class="hidden">
+            <article class="card full-width">
+                <h3>🔥 CPU por núcleo</h3>
+                <div class="cores-grid" id="cpu-cores-grid"></div>
+            </article>
+            <article class="card full-width">
+                <h3>Memoria de GPU</h3>
+                <div class="chart-container">
+                    <canvas id="gpuChart"></canvas>
+                </div>
+            </article>
+        </section>
+
+        <section id="analytics" class="hidden">
+            <article class="card full-width">
+                <h3>📊 Núcleos en tiempo real</h3>
+                <div class="chart-container">
+                    <canvas id="coresChart"></canvas>
+                </div>
+            </article>
+            <article class="card full-width">
+                <h3>💽 Actividad de discos</h3>
+                <div class="chart-container">
+                    <canvas id="diskReadChart"></canvas>
+                </div>
+                <div class="chart-container" style="margin-top: 24px;">
+                    <canvas id="diskWriteChart"></canvas>
+                </div>
+            </article>
+        </section>
+
+        <section id="processes" class="hidden">
+            <div class="process-table">
+                <div class="table-header">
+                    <div>PID</div>
+                    <div>Nombre</div>
+                    <div>CPU %</div>
+                    <div>Memoria</div>
+                    <div>Usuario</div>
+                </div>
+                <div id="processes-list"></div>
+            </div>
+        </section>
+
+        <section id="sensors" class="hidden">
+            <article class="card">
+                <h3>🌡️ Temperaturas</h3>
+                <div class="chart-container">
+                    <canvas id="tempChart"></canvas>
+                </div>
+                <table class="sensor-table" id="temp-table"></table>
+            </article>
+            <article class="card">
+                <h3>🌀 Ventiladores</h3>
+                <div class="chart-container">
+                    <canvas id="fanChart"></canvas>
+                </div>
+                <table class="sensor-table" id="fan-table"></table>
+            </article>
+            <article class="card">
+                <h3>🔋 Energía</h3>
+                <div class="sensor-grid">
+                    <div class="system-card">
+                        <h4>Batería</h4>
+                        <dl id="battery-info"></dl>
+                    </div>
+                    <div class="system-card">
+                        <h4>Fuentes de energía</h4>
+                        <table class="sensor-table" id="power-table"></table>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section id="system" class="hidden">
+            <article class="card">
+                <h3>⚙️ Información del sistema</h3>
+                <div class="system-grid" id="system-info"></div>
+            </article>
+            <article class="card">
+                <h3>🔌 PCI Express</h3>
+                <table class="sensor-table" id="pcie-table"></table>
+            </article>
+        </section>
+    </main>
+</body>
+</html>

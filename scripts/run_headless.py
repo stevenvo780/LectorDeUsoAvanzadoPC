@@ -1,29 +1,45 @@
-import os
+"""Ejecuta el servidor web durante unos segundos para pruebas manuales."""
+
+from __future__ import annotations
+
 import sys
+import threading
 import time
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-# Asegurar path del proyecto
-ROOT = os.path.dirname(os.path.dirname(__file__))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication
-from mission_center_clone.ui.main_window import MainWindow
+from pathlib import Path
 
 
-def main() -> int:
-    app = QApplication(sys.argv)
-    win = MainWindow()
-    # No show(); offscreen
-    QTimer.singleShot(3000, app.quit)  # 3s loop
-    t0 = time.time()
-    rc = app.exec()
-    print(f"HEADLESS_OK dt={time.time()-t0:.2f}s rc={rc}")
-    return rc
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from mission_center.web.server import create_app
+
+
+def _run_server(stop_event: threading.Event) -> None:
+    server = create_app(port=0)
+    address = server.server_address()
+    print(f"Iniciando Mission Center Web en {address} (modo temporal)")
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        while not stop_event.wait(0.1):
+            pass
+    finally:
+        server.stop()
+        thread.join()
+        print("Servidor detenido")
+
+
+def main(duration: float = 3.0) -> None:
+    stop_event = threading.Event()
+    worker = threading.Thread(target=_run_server, args=(stop_event,), daemon=True)
+    worker.start()
+    try:
+        time.sleep(duration)
+    finally:
+        stop_event.set()
+        worker.join()
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

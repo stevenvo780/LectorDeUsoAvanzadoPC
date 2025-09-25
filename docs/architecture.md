@@ -1,81 +1,66 @@
-# Arquitectura del Visualizador de Recursos
+# Arquitectura de la versión web
 
 ## Objetivo
-Crear una aplicación de escritorio para Linux que replique la experiencia del **Mission Center** de Windows 11, aportando vistas detalladas de uso de recursos del sistema y extendiendo la funcionalidad con métricas de IO y PCIe.
+Servir el tablero Mission Center directamente en el navegador, manteniendo los colectores de datos originales pero eliminando la dependencia de PySide/Qt.
 
-## Panorama de Funcionalidades
-- Vista general (Dashboard) con tarjetas para CPU, GPU, Memoria, Almacenamiento, Red, Batería y sensores.
-- Apartado de procesos con métricas por aplicación, agrupación y orden dinámico.
-- Estadísticas históricas mediante gráficos en tiempo real y registros recientes.
-- Monitoreo de tareas en segundo plano y aplicaciones iniciadas recientemente.
-- Panel de rendimiento por categoría replicando las vistas del Mission Center.
-- Vistas adicionales para cargas de **IO** (lectura/escritura) y **PCIe** (ancho de banda, latencia si está disponible).
+## Componentes principales
 
-## Pila Tecnológica
-- **Lenguaje:** Python 3.11+
-- **UI:** PySide6 (Qt for Python) con estilo similar a Fluent.
-- **Gráficas:** PySide6 Charts / PyQtGraph según disponibilidad.
-- **Sistema:** psutil, pyudev, pynvml (opcional para GPU NVIDIA), py3nvml.
-- **Sensores:** `psutil.sensors_*`, `pySMART` (opcional), `lm-sensors` vía bindings.
-
-## Arquitectura por Capas
 ```
-mission_center_clone/
-├── app.py                # arranque Qt, composición principal
-├── core/
-│   ├── config.py         # rutas y constantes
-│   ├── theme.py          # estilos y recursos
-│   └── updater.py        # scheduler de actualizaciones
-├── data/
-│   ├── __init__.py
-│   ├── cpu.py            # load, frecuencia, topología
-│   ├── memory.py         # RAM, swap
-│   ├── gpu.py            # métricas, fallback integrado/os
-│   ├── disk.py           # IO, almacenamiento, SMART
-│   ├── network.py        # throughput, latencia
-│   ├── pcie.py           # topología PCIe y uso (lspci/pyudev)
-│   └── processes.py      # scraper de procesos y apps
-├── models/
-│   ├── resource_snapshot.py
-│   └── process_info.py
-├── ui/
-│   ├── main_window.py    # navegación lateral + stack
-│   ├── dashboard.py
-│   ├── processes.py
-│   ├── performance/
-│   │   ├── __init__.py
-│   │   ├── cpu_view.py
-│   │   ├── memory_view.py
-│   │   ├── gpu_view.py
-│   │   ├── disk_view.py
-│   │   ├── network_view.py
-│   │   ├── io_view.py
-│   │   └── pcie_view.py
-│   └── widgets/          # componentes reutilizables (cards, charts)
-└── resources/
-    ├── qml/              # (opcional) QML para Fluent look
-    └── icons/
+mission_center/
+├── core/             # Configuración, temas y utilidades comunes
+│   ├── config.py
+│   ├── theme.py
+│   └── updater.py
+├── data/             # Colectores psutil / hw opcional
+├── models/           # Dataclasses con snapshots serializables
+└── web/
+    ├── collector.py  # Hilo de adquisición + ventanas deslizantes
+    ├── server.py     # Servidor HTTP (http.server + endpoints JSON)
+    ├── templates/
+    │   └── index.html
+    └── static/
+        ├── css/styles.css
+        └── js/app.js
 ```
 
-## Flujo General
-1. `app.py` inicializa Qt, carga el tema y lanza `MainWindow`.
-2. `MainWindow` gestiona la navegación tipo Mission Center (panel lateral + contenido).
-3. Cada vista solicita instantáneas a `core.updater` que orquesta la recolección periódica mediante tareas asincrónicas.
-4. Los módulos en `data/` encapsulan accesos a APIs del sistema (psutil, lecturas de /proc, nvml, etc.).
-5. Las vistas transforman `ResourceSnapshot` en widgets con gráficas y tablas.
-6. Se cachea histórico reciente en memoria para gráficas de 60s/30min.
+### Flujo de datos
+1. `DataCollector` inicia un hilo que consulta los proveedores cada segundo.
+2. Para cada snapshot se normaliza a `dict` utilizando `dataclasses.asdict`.
+3. Se almacenan históricas cortas (60 muestras) y medias (5 min) según el tipo de métrica.
+4. El servidor expone:
+   - `GET /api/current` → snapshot instantáneo.
+   - `GET /api/history` → históricos agregados para gráficas.
+5. La SPA (Chart.js + vanilla JS) consume ambos endpoints en intervalos de 1 s.
+6. El UI renderiza tarjetas, tablas y gráficos (CPU, memoria, IO, sensores, etc.).
 
-## Estrategia de Métricas IO y PCIe
-- IO: combinar `psutil.disk_io_counters(perdisk=True)` y métricas de procesos (`process.io_counters()`).
-- PCIe: usar `pyudev` para mapear dispositivos PCI, consultar velocidad (current/max link speed) y ancho de banda; medir actividad a través de contadores específicos cuando estén disponibles (``/sys/bus/pci/devices/*/``).
+### APIs y formato
+- **CPU:** `usage_percent`, `per_core[]`, `frequency_current_mhz`, `load_average`, `interrupts`.
+- **Memoria:** `percent`, `total_bytes`, `swap_percent`, `swap_used_bytes`.
+- **Discos/IO:** `devices[]` con lecturas/escrituras por segundo; histórico de MB/s.
+- **Red:** `interfaces[]` con throughput instantáneo.
+- **Procesos:** lista ordenada por CPU (`ProcessSnapshot.processes`).
+- **Sensores:** grupos de temperatura, lecturas de ventiladores, batería y fuentes de energía.
+- **Sistema:** información de hardware, BIOS, uptime y enlaces PCIe.
 
-## Extensibilidad
-- Capa de configuración para habilitar/deshabilitar módulos.
-- Sistema de plugins para detectar hardware adicional (GPU AMD/Intel, FPGA, dispositivos de almacenamiento).
-- Abstracciones para exportar métricas (Prometheus/OpenTelemetry) si se desea.
+## Stack tecnológico
 
-## Limitaciones Iniciales
-- Algunas métricas dependen de utilidades externas (`lm-sensors`, `nvml`, `smartctl`).
-- Obtención de datos PCIe profundos varía según kernel/driver.
-- Se entrega implementación base; afinamiento estético y de rendimiento requerirá trabajo adicional.
+- **Backend:** Python 3.10+, `http.server.ThreadedHTTPServer`, `psutil`.
+- **Frontend:** HTML estático + Chart.js 4, sin framework.
+- **Serialización:** `dataclasses.asdict` + utilidades propias para listas anidadas.
+- **Históricos:** `collections.deque` con tamaño configurable (`HISTORY` compartido).
+
+## Consideraciones de implementación
+
+- El colector es reiniciable (`start/stop`) para tests y scripts.
+- Los endpoints añaden cabecera `Access-Control-Allow-Origin: *` para facilitar integraciones.
+- Las gráficas se actualizan en modo "none" (sin animación) para mantener 60 FPS.
+- `Chart.js` se carga vía CDN; no requiere build toolchain.
+- Los scripts en `scripts/` permiten smoke tests y ejecuciones temporales del servidor.
+
+## Futuras mejoras
+
+- Añadir exportación WebSocket para reducir llamadas periódicas.
+- Empaquetar como imagen Docker/OCI.
+- Mejorar temas (claro/oscuro) y soporte PWA.
+- Integrar autenticación básica para despliegues remotos.
 
