@@ -1,29 +1,52 @@
 <!DOCTYPE html>
+<!--
+Mission Center Web Interface
+Icons: Migrated from emoji icons to Lucide Icons (https://lucide.dev/) for professional appearance
+Implementation: 
+- Lucide Icons CDN loaded via unpkg
+- Icons rendered via <i data-lucide="icon-name"> elements
+- JavaScript initialization: lucide.createIcons() on DOMContentLoaded
+- Complete icon replacement across all navigation and section headers
+-->
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mission Center · Web</title>
     <link rel="stylesheet" href="/css/styles.css" />
+    <!-- Lucide Icons - Professional icon library -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
     <script src="/js/app.js" type="module" defer></script>
 </head>
 <body>
     <aside class="sidebar">
-        <h2>🖥️ Mission Center</h2>
-        <div class="nav-item active" data-section="overview">📊 Resumen</div>
-        <div class="nav-item" data-section="performance">⚡ Rendimiento</div>
-        <div class="nav-item" data-section="analytics">📈 Analítica</div>
-        <div class="nav-item" data-section="processes">🔄 Procesos</div>
-        <div class="nav-item" data-section="sensors">🌡️ Sensores</div>
-        <div class="nav-item" data-section="system">⚙️ Sistema</div>
+        <h2><i data-lucide="monitor"></i> Mission Center</h2>
+        <div class="nav-item active" data-section="overview">
+            <i data-lucide="layout-dashboard"></i> Resumen
+        </div>
+        <div class="nav-item" data-section="performance">
+            <i data-lucide="zap"></i> Rendimiento
+        </div>
+        <div class="nav-item" data-section="analytics">
+            <i data-lucide="trending-up"></i> Analítica
+        </div>
+        <div class="nav-item" data-section="processes">
+            <i data-lucide="activity"></i> Procesos
+        </div>
+        <div class="nav-item" data-section="sensors">
+            <i data-lucide="thermometer"></i> Sensores
+        </div>
+        <div class="nav-item" data-section="system">
+            <i data-lucide="settings"></i> Sistema
+        </div>
     </aside>
 
     <main class="main-content">
 
         <section id="overview" class="dashboard">
             <article class="card">
-                <h3>🔥 CPU</h3>
+                <h3><i data-lucide="cpu"></i> CPU</h3>
                 <div class="metric-grid">
                     <div class="metric">
                         <div class="metric-label">Uso Total</div>
@@ -48,7 +71,7 @@
             </article>
 
             <article class="card">
-                <h3>💾 Memoria</h3>
+                <h3><i data-lucide="memory-stick"></i> Memoria</h3>
                 <div class="metric-grid">
                     <div class="metric">
                         <div class="metric-label">RAM usada</div>
@@ -73,7 +96,7 @@
             </article>
 
             <article class="card">
-                <h3>💽 Almacenamiento</h3>
+                <h3><i data-lucide="hard-drive"></i> Almacenamiento</h3>
                 <div class="metric-grid">
                     <div class="metric">
                         <div class="metric-label">Lectura</div>
@@ -98,7 +121,7 @@
             </article>
 
             <article class="card">
-                <h3>🌐 Red</h3>
+                <h3><i data-lucide="network"></i> Red</h3>
                 <div class="metric-grid">
                     <div class="metric">
                         <div class="metric-label">Subida</div>
@@ -125,17 +148,17 @@
 
         <section id="performance" class="hidden">
             <article class="card full-width">
-                <h3>🔥 CPU por núcleo</h3>
+                <h3><i data-lucide="flame"></i> CPU por núcleo</h3>
                 <div class="cores-grid" id="cpu-cores-grid"></div>
             </article>
             <article class="card full-width">
-                <h3>🎮 GPUs</h3>
+                <h3><i data-lucide="zap"></i> GPUs</h3>
                 <div id="gpu-cards-grid" class="gpu-cards-grid">
                     <!-- GPU cards will be dynamically populated -->
                 </div>
             </article>
             <article class="card full-width">
-                <h3>💽 I/O por dispositivo</h3>
+                <h3><i data-lucide="activity"></i> I/O por dispositivo</h3>
                 <div id="io-devices-grid" class="io-devices-grid">
                     <!-- I/O device cards will be dynamically populated -->
                 </div>
@@ -169,21 +192,21 @@
 
         <section id="sensors" class="hidden">
             <article class="card">
-                <h3>🌡️ Temperaturas</h3>
+                <h3><i data-lucide="thermometer"></i> Temperaturas</h3>
                 <div class="chart-container">
                     <canvas id="tempChart"></canvas>
                 </div>
                 <table class="sensor-table" id="temp-table"></table>
             </article>
             <article class="card">
-                <h3>🌀 Ventiladores</h3>
+                <h3><i data-lucide="wind"></i> Ventiladores</h3>
                 <div class="chart-container">
                     <canvas id="fanChart"></canvas>
                 </div>
                 <table class="sensor-table" id="fan-table"></table>
             </article>
             <article class="card">
-                <h3>🔋 Energía</h3>
+                <h3><i data-lucide="battery"></i> Energía</h3>
                 <div class="sensor-grid">
                     <div class="system-card">
                         <h4>Batería</h4>
@@ -199,7 +222,7 @@
 
         <section id="system" class="hidden">
             <article class="card">
-                <h3>🔗 Estado de Conexión</h3>
+                <h3><i data-lucide="link"></i> Estado de Conexión</h3>
                 <div class="status-bar" role="status" aria-live="polite">
                     <div class="status-pill" id="status-pill">
                         <span class="status-indicator" id="status-indicator" aria-hidden="true"></span>
@@ -219,7 +242,7 @@
             </article>
             
             <article class="card">
-                <h3>⚙️ Información del Sistema</h3>
+                <h3><i data-lucide="settings"></i> Información del Sistema</h3>
                 <div class="system-meta-grid">
                     <div>
                         <span class="status-label">Tiempo activo</span>
@@ -238,10 +261,17 @@
             </article>
             
             <article class="card">
-                <h3>🔌 PCI Express</h3>
+                <h3><i data-lucide="cable"></i> PCI Express</h3>
                 <table class="sensor-table" id="pcie-table"></table>
             </article>
         </section>
     </main>
+
+    <script>
+        // Initialize Lucide icons after page load
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 </html>
