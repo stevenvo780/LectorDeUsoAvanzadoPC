@@ -20,40 +20,6 @@
     </aside>
 
     <main class="main-content">
-        <header class="header">
-            <div>
-                <h1>Monitor del Sistema</h1>
-                <p class="subtitle">Estado en tiempo real de tus recursos locales</p>
-            </div>
-            <div class="status-bar" role="status" aria-live="polite">
-                <div class="status-pill" id="status-pill">
-                    <span class="status-indicator" id="status-indicator" aria-hidden="true"></span>
-                    <span id="status-text">Conectando...</span>
-                </div>
-                <div class="status-meta">
-                    <div>
-                        <span class="status-label">Actualización</span>
-                        <span class="status-value" id="last-update">--:--:--</span>
-                    </div>
-                    <div>
-                        <span class="status-label">Tiempo activo</span>
-                        <span class="status-value" id="uptime-value">--</span>
-                    </div>
-                    <div>
-                        <span class="status-label">Host</span>
-                        <span class="status-value" id="host-name">--</span>
-                    </div>
-                    <div>
-                        <span class="status-label">Sistema</span>
-                        <span class="status-value" id="os-name">--</span>
-                    </div>
-                    <div>
-                        <span class="status-label">Permisos</span>
-                        <span class="status-value permissions-indicator" id="permissions-indicator">🔒 Verificando...</span>
-                    </div>
-                </div>
-            </div>
-        </header>
 
         <section id="overview" class="dashboard">
             <article class="card">
@@ -227,9 +193,44 @@
 
         <section id="system" class="hidden">
             <article class="card">
-                <h3>⚙️ Información del sistema</h3>
+                <h3>🔗 Estado de Conexión</h3>
+                <div class="status-bar" role="status" aria-live="polite">
+                    <div class="status-pill" id="status-pill">
+                        <span class="status-indicator" id="status-indicator" aria-hidden="true"></span>
+                        <span id="status-text">Conectando...</span>
+                    </div>
+                    <div class="status-meta">
+                        <div>
+                            <span class="status-label">Actualización</span>
+                            <span class="status-value" id="last-update">--:--:--</span>
+                        </div>
+                        <div>
+                            <span class="status-label">Permisos</span>
+                            <span class="status-value permissions-indicator" id="permissions-indicator">🔒 Verificando...</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            
+            <article class="card">
+                <h3>⚙️ Información del Sistema</h3>
+                <div class="system-meta-grid">
+                    <div>
+                        <span class="status-label">Tiempo activo</span>
+                        <span class="status-value" id="uptime-value">--</span>
+                    </div>
+                    <div>
+                        <span class="status-label">Host</span>
+                        <span class="status-value" id="host-name">--</span>
+                    </div>
+                    <div>
+                        <span class="status-label">Sistema Operativo</span>
+                        <span class="status-value" id="os-name">--</span>
+                    </div>
+                </div>
                 <div class="system-grid" id="system-info"></div>
             </article>
+            
             <article class="card">
                 <h3>🔌 PCI Express</h3>
                 <table class="sensor-table" id="pcie-table"></table>

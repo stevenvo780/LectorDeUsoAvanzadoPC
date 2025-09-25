@@ -405,7 +405,12 @@ function ensureMiniChart(coreId, label) {
 function updateCoreGrid(cpu) {
     const cores = cpu?.per_core || [];
     const grid = document.getElementById("cpu-cores-grid");
+    
+    // Destruir gráficos existentes antes de borrar el HTML
+    miniCharts.forEach(chart => chart.destroy());
+    miniCharts.clear();
     grid.innerHTML = "";
+    
     cores.forEach((core) => {
         const card = document.createElement("div");
         card.className = "core-item";

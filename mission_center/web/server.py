@@ -89,7 +89,7 @@ class MissionCenterServer:
         return f"http://{host}:{port}"
 
 
-def create_app(host: str = "127.0.0.1", port: int = 8080) -> MissionCenterServer:
+def create_app(host: str = "127.0.0.1", port: int = 8081) -> MissionCenterServer:
     """Factory helper used by CLI scripts and tests."""
 
     return MissionCenterServer(host=host, port=port)
