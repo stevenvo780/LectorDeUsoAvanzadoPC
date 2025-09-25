@@ -46,14 +46,28 @@ class MissionCenterRequestHandler(SimpleHTTPRequestHandler):
         return
 
     def _send_index(self) -> None:
-        # Try new template system first, fallback to old system
         try:
-            rendered_html = template_renderer.render("index_new.html")
-            content = rendered_html.encode("utf-8")
-        except FileNotFoundError:
-            # Fallback to original index.html
-            index_path = TEMPLATES_DIR / "index.html"
-            content = index_path.read_text(encoding="utf-8").encode("utf-8")
+            html = template_renderer.render("index_new.html")
+            content = html.encode("utf-8")
+        except Exception as template_error:
+            print(f"Template rendering error: {template_error}")
+            content = None
+
+        if content is None:
+            fallback_files = ["index_clean.html", "index.html"]
+            for candidate in fallback_files:
+                candidate_path = TEMPLATES_DIR / candidate
+                if candidate_path.exists():
+                    try:
+                        content = candidate_path.read_text(encoding="utf-8").encode("utf-8")
+                        break
+                    except Exception as read_error:
+                        print(f"Error loading fallback template {candidate}: {read_error}")
+                        continue
+
+        if content is None:
+            content = b"<html><body><h1>Mission Center</h1><p>Template error</p></body></html>"
+        
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
@@ -77,9 +91,22 @@ class MissionCenterServer:
         self._collector = collector
         self._collector.start()
         handler = partial(MissionCenterRequestHandler, data_collector=self._collector)
-        self._httpd = ThreadingHTTPServer((host, port), handler)
-        self.host = host
-        self.port = port
+        
+        # Mejorar manejo de puertos ocupados
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            try:
+                self._httpd = ThreadingHTTPServer((host, port + attempt), handler)
+                self.host = host
+                self.port = port + attempt
+                break
+            except OSError as e:
+                if e.errno == 98:  # Address already in use
+                    if attempt == max_attempts - 1:
+                        raise Exception(f"No se pudo encontrar puerto disponible después de {max_attempts} intentos")
+                    continue
+                else:
+                    raise
 
     def serve_forever(self) -> None:
         try:
@@ -89,17 +116,26 @@ class MissionCenterServer:
 
     def stop(self) -> None:
         try:
-            self._httpd.shutdown()
+            if hasattr(self, '_httpd') and self._httpd:
+                self._httpd.shutdown()
+        except Exception as e:
+            print(f"Warning: Error al detener servidor: {e}")
         finally:
-            self._httpd.server_close()
-            self._collector.stop()
+            try:
+                if hasattr(self, '_httpd') and self._httpd:
+                    self._httpd.server_close()
+            except Exception as e:
+                print(f"Warning: Error al cerrar socket: {e}")
+            finally:
+                if hasattr(self, '_collector') and self._collector:
+                    self._collector.stop()
 
     def server_address(self) -> str:
         host, port = self._httpd.server_address
         return f"http://{host}:{port}"
 
 
-def create_app(host: str = "127.0.0.1", port: int = 8081) -> MissionCenterServer:
+def create_app(host: str = "127.0.0.1", port: int = 8080) -> MissionCenterServer:
     """Factory helper used by CLI scripts and tests."""
 
     return MissionCenterServer(host=host, port=port)

@@ -1,11 +1,100 @@
 <section id="overview" class="interactive-dashboard">
-    {% include 'components/dashboard-toolbar.html' %}
+    <div class="dashboard-shell">
+        {% include 'components/dashboard-toolbar.html' %}
 
-    <!-- Interactive Widget Grid -->
-    <div class="widgets-grid" id="widgets-container">
-        {% include 'components/widgets/cpu-widget.html' %}
-        {% include 'components/widgets/memory-widget.html' %}
-        {% include 'components/widgets/storage-widget.html' %}
-        {% include 'components/widgets/network-widget.html' %}
+        <div class="dashboard-layout">
+            <div class="dashboard-main">
+                <div class="widgets-grid" id="widgets-container">
+                    {% include 'components/widgets/cpu-widget.html' %}
+                    {% include 'components/widgets/memory-widget.html' %}
+                    {% include 'components/widgets/storage-widget.html' %}
+                    {% include 'components/widgets/network-widget.html' %}
+                </div>
+
+                <div class="drop-zone-indicator" id="drop-indicator" aria-hidden="true" style="display: none;">
+                    <i data-lucide="move"></i>
+                    <span>Arrastra y suelta widgets aquí</span>
+                </div>
+            </div>
+
+            <aside class="dashboard-sidebar">
+                <article class="dashboard-card status-card">
+                    <header class="dashboard-card-header">
+                        <h3><i data-lucide="link"></i> Estado de conexión</h3>
+                    </header>
+                    <div class="status-bar compact" role="status" aria-live="polite">
+                        <div class="status-pill" id="status-pill" data-status="pill">
+                            <span class="status-indicator" id="status-indicator" data-status="indicator" aria-hidden="true"></span>
+                            <span id="status-text" data-status="text">Conectando...</span>
+                        </div>
+                        <div class="status-meta dense">
+                            <div>
+                                <span class="status-label">Actualización</span>
+                                <span class="status-value" id="last-update" data-status="last-update">--:--:--</span>
+                            </div>
+                            <div>
+                                <span class="status-label">Permisos</span>
+                                <span class="status-value permissions-indicator" id="permissions-indicator" data-status="permissions">🔒 Verificando...</span>
+                            </div>
+                            <div>
+                                <span class="status-label">Tiempo activo</span>
+                                <span class="status-value" id="uptime-value" data-status="uptime">--</span>
+                            </div>
+                            <div>
+                                <span class="status-label">Host</span>
+                                <span class="status-value" id="host-name" data-status="host">--</span>
+                            </div>
+                            <div>
+                                <span class="status-label">Sistema</span>
+                                <span class="status-value" id="os-name" data-status="os">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="dashboard-card snapshot-card">
+                    <header class="dashboard-card-header">
+                        <h3><i data-lucide="activity"></i> Instantánea de recursos</h3>
+                    </header>
+                    <dl class="snapshot-grid">
+                        <div>
+                            <dt>CPU</dt>
+                            <dd data-snapshot="cpu-usage">--</dd>
+                        </div>
+                        <div>
+                            <dt>Frecuencia</dt>
+                            <dd data-snapshot="cpu-frequency">--</dd>
+                        </div>
+                        <div>
+                            <dt>RAM</dt>
+                            <dd data-snapshot="memory-usage">--</dd>
+                        </div>
+                        <div>
+                            <dt>Swap</dt>
+                            <dd data-snapshot="swap-usage">--</dd>
+                        </div>
+                        <div>
+                            <dt>E/S disco</dt>
+                            <dd data-snapshot="disk-io">--</dd>
+                        </div>
+                        <div>
+                            <dt>Tráfico red</dt>
+                            <dd data-snapshot="net-io">--</dd>
+                        </div>
+                    </dl>
+                </article>
+
+                <article class="dashboard-card tips-card">
+                    <header class="dashboard-card-header">
+                        <h3><i data-lucide="sparkles"></i> Trucos rápidos</h3>
+                    </header>
+                    <ul class="tips-list">
+                        <li>Arrastra desde la cabecera del widget para reordenarlo en la grilla.</li>
+                        <li>Usa el botón <strong>Resetear Layout</strong> para volver a la disposición original.</li>
+                        <li>Tus cambios se guardan automáticamente en este navegador.</li>
+                    </ul>
+                </article>
+            </aside>
+        </div>
     </div>
 </section>

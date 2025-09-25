@@ -9,15 +9,43 @@ const CORE_HISTORY_LENGTH = 60;
 const NAV_ITEMS = Array.from(document.querySelectorAll(".nav-item"));
 
 const STATUS_ELEMENTS = {
-    pill: () => document.getElementById("status-pill"),
-    text: () => document.getElementById("status-text"),
-    indicator: () => document.getElementById("status-indicator"),
-    lastUpdate: () => document.getElementById("last-update"),
-    uptime: () => document.getElementById("uptime-value"),
-    host: () => document.getElementById("host-name"),
-    os: () => document.getElementById("os-name"),
-    permissions: () => document.getElementById("permissions-indicator"),
+    pill: () => document.querySelectorAll('[data-status="pill"], #status-pill'),
+    text: () => document.querySelectorAll('[data-status="text"], #status-text'),
+    indicator: () => document.querySelectorAll('[data-status="indicator"], #status-indicator'),
+    lastUpdate: () => document.querySelectorAll('[data-status="last-update"], #last-update'),
+    uptime: () => document.querySelectorAll('[data-status="uptime"], #uptime-value'),
+    host: () => document.querySelectorAll('[data-status="host"], #host-name'),
+    os: () => document.querySelectorAll('[data-status="os"], #os-name'),
+    permissions: () => document.querySelectorAll('[data-status="permissions"], #permissions-indicator'),
 };
+
+const SNAPSHOT_ELEMENTS = {
+    cpuUsage: () => document.querySelectorAll('[data-snapshot="cpu-usage"]'),
+    cpuFrequency: () => document.querySelectorAll('[data-snapshot="cpu-frequency"]'),
+    memoryUsage: () => document.querySelectorAll('[data-snapshot="memory-usage"]'),
+    swapUsage: () => document.querySelectorAll('[data-snapshot="swap-usage"]'),
+    diskIO: () => document.querySelectorAll('[data-snapshot="disk-io"]'),
+    netIO: () => document.querySelectorAll('[data-snapshot="net-io"]'),
+};
+
+function updateElements(collection, callback) {
+    if (!collection) return;
+    Array.from(collection).forEach((node) => {
+        try {
+            callback(node);
+        } catch (error) {
+            console.warn("Dashboard element update error", error);
+        }
+    });
+}
+
+function updateSnapshot(name, value) {
+    const nodes = SNAPSHOT_ELEMENTS[name]?.();
+    if (!nodes) return;
+    updateElements(nodes, (node) => {
+        node.textContent = value;
+    });
+}
 
 function formatBytes(value) {
     if (!value && value !== 0) return "--";
@@ -65,81 +93,131 @@ function showSection(section) {
 }
 
 function createLineChart(canvasId, options = {}) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return null;
-    const baseConfig = {
-        type: "line",
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: false,
-            interaction: { mode: "index", intersect: false },
-            plugins: { legend: { labels: { color: "#e2e8f0" } } },
-            scales: {
-                x: { display: false, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.1)" } },
-                y: { beginAtZero: true, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.1)" } },
+    try {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            console.warn(`Canvas element ${canvasId} not found`);
+            return null;
+        }
+        
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js not loaded');
+            return null;
+        }
+        
+        const baseConfig = {
+            type: "line",
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: { legend: { labels: { color: "#e2e8f0" } } },
+                scales: {
+                    x: { display: false, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.1)" } },
+                    y: { beginAtZero: true, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148,163,184,0.1)" } },
+                },
+                elements: { point: { radius: 0 } },
             },
-            elements: { point: { radius: 0 } },
-        },
-        data: { labels: Array(60).fill(""), datasets: [] },
-    };
-    return new Chart(canvas.getContext("2d"), Chart.helpers.merge(baseConfig, options));
+            data: { labels: Array(60).fill(""), datasets: [] },
+        };
+        
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+            console.error(`Cannot get 2D context for ${canvasId}`);
+            return null;
+        }
+        
+        return new Chart(ctx, Chart.helpers.merge(baseConfig, options));
+    } catch (error) {
+        console.error(`Error creating chart ${canvasId}:`, error);
+        return null;
+    }
 }
 
-function setConnectionState(isConnected) {
-    const pill = STATUS_ELEMENTS.pill();
-    const text = STATUS_ELEMENTS.text();
-    if (!pill || !text) return;
-    pill.classList.remove("online", "offline");
-    pill.classList.add(isConnected ? "online" : "offline");
-    pill.setAttribute("aria-label", isConnected ? "Conexión establecida" : "Conexión caída");
-    text.textContent = isConnected ? "Conectado ✅" : "Error de conexión ❌";
+function setConnectionState(isConnected, customMessage = null) {
+    const pills = STATUS_ELEMENTS.pill();
+    const texts = STATUS_ELEMENTS.text();
+    if (!pills.length || !texts.length) return;
+
+    const reconnecting = !isConnected && (!customMessage || !customMessage.includes("perdida"));
+    const baseMessage = isConnected ? "Conectado ✅" : customMessage || "Error de conexión ❌";
+    const reconnectMessage = reconnecting ? "Reconectando... 🔄" : baseMessage;
+
+    updateElements(pills, (pill) => {
+        pill.classList.remove("online", "offline", "reconnecting");
+        if (isConnected) {
+            pill.classList.add("online");
+            pill.setAttribute("aria-label", "Conexión establecida");
+        } else {
+            pill.classList.add("offline");
+            pill.setAttribute("aria-label", reconnecting ? "Reconectando" : (customMessage || "Conexión caída"));
+            if (reconnecting) {
+                pill.classList.add("reconnecting");
+            }
+        }
+    });
+
+    updateElements(texts, (node) => {
+        node.textContent = reconnectMessage;
+    });
 }
 
 function updateStatusMeta(current) {
-    const lastUpdate = STATUS_ELEMENTS.lastUpdate();
-    if (lastUpdate) {
-        lastUpdate.textContent = new Date().toLocaleTimeString();
+    const lastUpdates = STATUS_ELEMENTS.lastUpdate();
+    if (lastUpdates.length) {
+        const value = new Date().toLocaleTimeString();
+        updateElements(lastUpdates, (node) => {
+            node.textContent = value;
+        });
     }
 
     const system = current?.system || {};
 
     const uptime = STATUS_ELEMENTS.uptime();
-    if (uptime) {
-        uptime.textContent = system.uptime_seconds != null ? formatDuration(system.uptime_seconds) : "--";
+    if (uptime.length) {
+        const value = system.uptime_seconds != null ? formatDuration(system.uptime_seconds) : "--";
+        updateElements(uptime, (node) => {
+            node.textContent = value;
+        });
     }
 
-    const host = STATUS_ELEMENTS.host();
-    if (host) {
-        host.textContent = system.hostname || "--";
+    const hostNodes = STATUS_ELEMENTS.host();
+    if (hostNodes.length) {
+        updateElements(hostNodes, (node) => {
+            node.textContent = system.hostname || "--";
+        });
     }
 
-    const os = STATUS_ELEMENTS.os();
-    if (os) {
+    const osNodes = STATUS_ELEMENTS.os();
+    if (osNodes.length) {
         const summaryParts = [];
         const osLabel = [system.os_name, system.os_version].filter(Boolean).join(" ");
         if (osLabel) summaryParts.push(osLabel);
         if (system.architecture) summaryParts.push(system.architecture);
         const summary = summaryParts.join(" · ");
         const virt = system.virtualization ? ` (${system.virtualization})` : "";
-        os.textContent = summary ? `${summary}${virt}` : "--";
+        const value = summary ? `${summary}${virt}` : "--";
+        updateElements(osNodes, (node) => {
+            node.textContent = value;
+        });
     }
     
     updatePermissionsIndicator(current?.permissions);
 }
 
 function updatePermissionsIndicator(permissions) {
-    const indicator = STATUS_ELEMENTS.permissions();
-    if (!indicator || !permissions) return;
+    const indicators = STATUS_ELEMENTS.permissions();
+    if (!permissions || !indicators.length) return;
     
     const level = permissions.permission_level || "limited";
     const accessPercentage = permissions.access_percentage || 0;
     
 
-    indicator.classList.remove("perm-full", "perm-good", "perm-partial", "perm-limited");
-    
-
-    indicator.classList.add(`perm-${level}`);
+    updateElements(indicators, (node) => {
+        node.classList.remove("perm-full", "perm-good", "perm-partial", "perm-limited", "perm-container_good", "perm-container_limited");
+        node.classList.add(`perm-${level}`);
+    });
     
 
     const icons = {
@@ -163,26 +241,36 @@ function updatePermissionsIndicator(permissions) {
     const icon = icons[level] || "❓";
     const label = labels[level] || "Desconocido";
     
-    indicator.textContent = `${icon} ${label} (${accessPercentage}%)`;
-    indicator.title = permissions.warnings?.length > 0 
+    const title = permissions.warnings?.length > 0 
         ? `Permisos: ${label}\n\nAdvertencias:\n${permissions.warnings.join('\n')}`
         : `Permisos: ${label} - ${accessPercentage}% de rutas del sistema accesibles`;
+
+    updateElements(indicators, (node) => {
+        node.textContent = `${icon} ${label} (${accessPercentage}%)`;
+        node.title = title;
+    });
 }
 
 function initCharts() {
-    charts.cpu = createLineChart("cpuChart", {
-        data: {
-            datasets: [
-                {
-                    label: "Uso CPU %",
-                    data: Array(60).fill(0),
-                    borderColor: "#22d3ee",
-                    backgroundColor: "rgba(34, 211, 238, 0.18)",
-                    fill: true,
-                },
-            ],
-        },
-    });
+    try {
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js not loaded');
+            return;
+        }
+        
+        charts.cpu = createLineChart("cpuChart", {
+            data: {
+                datasets: [
+                    {
+                        label: "Uso CPU %",
+                        data: Array(60).fill(0),
+                        borderColor: "#22d3ee",
+                        backgroundColor: "rgba(34, 211, 238, 0.18)",
+                        fill: true,
+                    },
+                ],
+            },
+        });
 
     charts.memory = createLineChart("memoryChart", {
         data: {
@@ -330,6 +418,9 @@ function initCharts() {
             ],
         },
     });
+    } catch (error) {
+        console.error('Error initializing charts:', error);
+    }
 }
 
 function updateOverview(data) {
@@ -339,12 +430,16 @@ function updateOverview(data) {
         document.getElementById("cpu-freq").textContent = formatFrequency(cpu.frequency_current_mhz);
         document.getElementById("cpu-cores").textContent = formatNumber(cpu.logical_cores);
         document.getElementById("cpu-physical").textContent = formatNumber(cpu.physical_cores);
+        updateSnapshot("cpuUsage", `${cpu.usage_percent?.toFixed(1) ?? "--"}%`);
+        updateSnapshot("cpuFrequency", formatFrequency(cpu.frequency_current_mhz));
     }
     if (memory) {
         document.getElementById("mem-usage").textContent = `${memory.percent?.toFixed(1) ?? "--"}%`;
         document.getElementById("mem-total").textContent = formatBytes(memory.total_bytes);
         document.getElementById("swap-usage").textContent = `${memory.swap_percent?.toFixed(1) ?? "--"}%`;
         document.getElementById("swap-total").textContent = formatBytes(memory.swap_total_bytes);
+    updateSnapshot("memoryUsage", `${memory.percent?.toFixed(1) ?? "--"}% de ${formatBytes(memory.total_bytes)}`);
+    updateSnapshot("swapUsage", `${memory.swap_percent?.toFixed(1) ?? "--"}% de ${formatBytes(memory.swap_total_bytes)}`);
     }
     if (disk && io) {
         const totalRead = disk.devices?.reduce((sum, dev) => sum + (dev.read_bytes_per_sec || 0), 0) || 0;
@@ -353,6 +448,7 @@ function updateOverview(data) {
         document.getElementById("disk-write").textContent = `${formatBytes(totalWrite)}/s`;
         document.getElementById("disk-count").textContent = formatNumber(disk.devices?.length ?? 0);
         document.getElementById("io-total").textContent = `${formatBytes(io.read_bytes_per_sec + io.write_bytes_per_sec)} /s`;
+    updateSnapshot("diskIO", `${formatBytes(totalRead)}/s ↑ · ${formatBytes(totalWrite)}/s ↓`);
     }
     if (network) {
         const totalSent = network.interfaces?.reduce((sum, iface) => sum + (iface.sent_bytes_per_sec || 0), 0) || 0;
@@ -362,6 +458,7 @@ function updateOverview(data) {
         document.getElementById("net-interfaces").textContent = formatNumber(
             network.interfaces?.filter((iface) => iface.is_up).length ?? 0,
         );
+    updateSnapshot("netIO", `${formatBytes(totalSent)}/s ↑ · ${formatBytes(totalRecv)}/s ↓`);
     }
     document.getElementById("gpu-count").textContent = formatNumber(gpu?.length ?? 0);
 }
@@ -646,32 +743,97 @@ function formatDuration(seconds) {
         .padStart(2, "0")}s`;
 }
 
-async function fetchJSON(url) {
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+async function fetchJSON(url, timeout = 5000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(url, { 
+            cache: "no-store",
+            signal: controller.signal,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+        }
+        
+        return await response.json();
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout');
+        }
+        throw error;
+    }
 }
 
+let updateLoopRetryCount = 0;
+let updateLoopRunning = false;
+const MAX_RETRY_COUNT = 5;
+const RETRY_DELAYS = [1000, 2000, 5000, 10000, 15000];
+
 async function updateLoop() {
+    if (updateLoopRunning) return; // Prevent concurrent updates
+    updateLoopRunning = true;
+    
     try {
         const [current, history] = await Promise.all([
             fetchJSON("/api/current"),
             fetchJSON("/api/history"),
         ]);
+        
+        // Reset retry count on successful fetch
+        updateLoopRetryCount = 0;
         setConnectionState(true);
-        updateStatusMeta(current);
-
-        updateOverview(current);
-        updatePerformance(current);
-        updateProcesses(current);
-        updateSensorTables(current);
-        updateSystemInfo(current);
-        updateHistoryCharts(history);
-        updateGPUGrid(current.gpu);
-        updateIODevicesGrid(current.io);
+        
+        // Only update if we have valid data
+        if (current) {
+            updateStatusMeta(current);
+            updateOverview(current);
+            updatePerformance(current);
+            updateProcesses(current);
+            updateSensorTables(current);
+            updateSystemInfo(current);
+            
+            if (current.gpu) updateGPUGrid(current.gpu);
+            if (current.io) updateIODevicesGrid(current.io);
+        }
+        
+        if (history) {
+            updateHistoryCharts(history);
+        }
+        
     } catch (error) {
+        console.error("Update loop error:", error);
         setConnectionState(false);
-        console.error("Fetch error", error);
+        
+        // Implement exponential backoff for retries
+        updateLoopRetryCount = Math.min(updateLoopRetryCount + 1, MAX_RETRY_COUNT);
+        const retryDelay = RETRY_DELAYS[updateLoopRetryCount - 1] || RETRY_DELAYS[RETRY_DELAYS.length - 1];
+        
+        console.warn(`Retry ${updateLoopRetryCount}/${MAX_RETRY_COUNT} in ${retryDelay}ms`);
+        
+        // Schedule retry with backoff delay
+        setTimeout(() => {
+            if (updateLoopRetryCount < MAX_RETRY_COUNT) {
+                updateLoop();
+            } else {
+                console.error("Max retries reached. Stopping updates.");
+                setConnectionState(false, "Conexión perdida - Refresca la página");
+            }
+        }, retryDelay);
+    } finally {
+        updateLoopRunning = false;
     }
 }
 
@@ -1020,12 +1182,14 @@ function updateIODeviceCardData(card, deviceName, stats) {
 class InteractiveDashboard {
     constructor() {
         this.widgetsContainer = document.getElementById('widgets-container');
-        this.dropIndicator = document.getElementById('drop-indicator');
         this.widgetModal = document.getElementById('widget-selector-modal');
         this.selectedWidgetType = null;
         this.draggedWidget = null;
         this.isResizing = false;
         this.currentResizeWidget = null;
+        this.placeholder = document.createElement('div');
+        this.placeholder.className = 'widget-placeholder';
+        this.placeholder.setAttribute('aria-hidden', 'true');
 
         // Widget templates
         this.widgetTemplates = {
@@ -1078,6 +1242,11 @@ class InteractiveDashboard {
                 chartId: null
             }
         };
+
+        if (!this.widgetsContainer) {
+            console.warn('InteractiveDashboard: widgets container not found');
+            return;
+        }
 
         this.initEventListeners();
         this.loadLayoutFromStorage();
@@ -1265,132 +1434,312 @@ class InteractiveDashboard {
     }
 
     toggleWidgetSize(widget) {
-        const currentSize = widget.classList.contains('widget-large') ? 'large' : 
-                          widget.classList.contains('widget-small') ? 'small' : 'medium';
-        
-        widget.classList.remove('widget-small', 'widget-medium', 'widget-large');
-        
-        switch (currentSize) {
-            case 'small':
-                widget.classList.add('widget-medium');
-                break;
-            case 'medium':
-                widget.classList.add('widget-large');
-                break;
-            case 'large':
-                widget.classList.add('widget-small');
-                break;
+        try {
+            const currentSize = widget.classList.contains('widget-large') ? 'large' : 
+                              widget.classList.contains('widget-small') ? 'small' : 'medium';
+            
+            widget.classList.remove('widget-small', 'widget-medium', 'widget-large');
+            
+            switch (currentSize) {
+                case 'small':
+                    widget.classList.add('widget-medium');
+                    break;
+                case 'medium':
+                    widget.classList.add('widget-large');
+                    break;
+                case 'large':
+                    widget.classList.add('widget-small');
+                    break;
+            }
+            
+            // Clear any custom size styles when toggling predefined sizes
+            widget.style.width = '';
+            widget.style.height = '';
+            
+            // Resize charts after size change
+            setTimeout(() => {
+                this.resizeWidgetCharts(widget);
+            }, 100);
+            
+            this.saveLayoutToStorage();
+            console.log('Widget size toggled to:', widget.classList.contains('widget-large') ? 'large' : 
+                       widget.classList.contains('widget-small') ? 'small' : 'medium');
+        } catch (error) {
+            console.error('Error toggling widget size:', error);
         }
-        
-        this.saveLayoutToStorage();
     }
 
     // Drag and Drop functionality
     handleDragStart(e) {
-        if (!e.target.classList.contains('widget')) return;
-        
-        this.draggedWidget = e.target;
-        e.target.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
+        try {
+            const widget = e.target.closest('.widget');
+            if (!widget || widget.classList.contains('dragging')) {
+                return;
+            }
+
+            if (e.target.closest('.widget-controls')) {
+                return;
+            }
+
+            this.draggedWidget = widget;
+            widget.classList.add('dragging');
+
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = 'move';
+                try {
+                    e.dataTransfer.setData('text/plain', widget.dataset.widgetId || '');
+                } catch (setDataError) {
+                    e.dataTransfer.setData('text/plain', '');
+                }
+
+                if (typeof e.dataTransfer.setDragImage === 'function') {
+                    const rect = widget.getBoundingClientRect();
+                    e.dataTransfer.setDragImage(widget, rect.width / 2, rect.height / 2);
+                }
+            }
+
+            this.placeholder.style.height = `${widget.offsetHeight}px`;
+            this.placeholder.style.width = `${widget.offsetWidth}px`;
+
+            ['widget-small', 'widget-medium', 'widget-large'].forEach((sizeClass) => {
+                if (widget.classList.contains(sizeClass)) {
+                    this.placeholder.classList.add(sizeClass);
+                } else {
+                    this.placeholder.classList.remove(sizeClass);
+                }
+            });
+
+            if (!this.placeholder.parentElement) {
+                widget.after(this.placeholder);
+            }
+
+            console.log('Drag started for widget:', widget.dataset.widgetType);
+        } catch (error) {
+            console.error('Error in handleDragStart:', error);
+        }
     }
 
     handleDragOver(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        
-        if (this.draggedWidget) {
-            this.showDropIndicator(e);
+        try {
+            if (!this.draggedWidget || !this.widgetsContainer) {
+                return;
+            }
+
+            e.preventDefault();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'move';
+            }
+
+            const afterElement = this.getDragAfterElement(e.clientY);
+            if (!afterElement) {
+                this.widgetsContainer.appendChild(this.placeholder);
+            } else if (afterElement !== this.placeholder) {
+                this.widgetsContainer.insertBefore(this.placeholder, afterElement);
+            }
+        } catch (error) {
+            console.error('Error in handleDragOver:', error);
         }
     }
 
     handleDrop(e) {
-        e.preventDefault();
-        this.hideDropIndicator();
-        
-        if (!this.draggedWidget) return;
-        
-        const targetWidget = e.target.closest('.widget');
-        if (targetWidget && targetWidget !== this.draggedWidget) {
-            // Insert before target widget
-            this.widgetsContainer.insertBefore(this.draggedWidget, targetWidget);
+        try {
+            e.preventDefault();
+
+            if (!this.draggedWidget || !this.widgetsContainer) {
+                this.cleanupDrag();
+                return;
+            }
+
+            if (this.placeholder.parentElement === this.widgetsContainer) {
+                this.widgetsContainer.insertBefore(this.draggedWidget, this.placeholder);
+            } else {
+                this.widgetsContainer.appendChild(this.draggedWidget);
+            }
+
+            console.log('Widget reordered successfully');
             this.saveLayoutToStorage();
+            this.cleanupDrag();
+        } catch (error) {
+            console.error('Error in handleDrop:', error);
+            this.cleanupDrag();
         }
     }
 
-    handleDragEnd(e) {
-        if (e.target.classList.contains('widget')) {
-            e.target.classList.remove('dragging');
+    handleDragEnd() {
+        if (this.draggedWidget) {
+            console.log('Drag operation ended');
         }
+        this.cleanupDrag();
+    }
+
+    getDragAfterElement(clientY) {
+        if (!this.widgetsContainer) {
+            return null;
+        }
+
+        const draggableElements = Array.from(
+            this.widgetsContainer.querySelectorAll('.widget:not(.dragging)')
+        );
+
+        let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+
+        draggableElements.forEach((child) => {
+            const box = child.getBoundingClientRect();
+            const offset = clientY - (box.top + box.height / 2);
+
+            if (offset < 0 && offset > closest.offset) {
+                closest = { offset, element: child };
+            }
+        });
+
+        return closest.element;
+    }
+
+    cleanupDrag() {
+        if (this.draggedWidget) {
+            this.draggedWidget.classList.remove('dragging');
+        }
+
+        if (this.placeholder && this.placeholder.parentElement) {
+            this.placeholder.parentElement.removeChild(this.placeholder);
+        }
+
+        this.placeholder.style.width = '';
+        this.placeholder.style.height = '';
+        this.placeholder.classList.remove('widget-small', 'widget-medium', 'widget-large');
+
         this.draggedWidget = null;
-        this.hideDropIndicator();
-    }
-
-    showDropIndicator(e) {
-        const rect = this.widgetsContainer.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        this.dropIndicator.style.display = 'flex';
-        this.dropIndicator.style.left = `${Math.max(0, x - 150)}px`;
-        this.dropIndicator.style.top = `${Math.max(0, y - 75)}px`;
-        this.dropIndicator.style.width = '300px';
-        this.dropIndicator.style.height = '150px';
-    }
-
-    hideDropIndicator() {
-        this.dropIndicator.style.display = 'none';
     }
 
     // Resize functionality
     handleMouseDown(e) {
-        if (e.target.classList.contains('resize-handle')) {
-            this.isResizing = true;
-            this.currentResizeWidget = e.target.closest('.widget');
-            this.currentResizeWidget.classList.add('resizing');
-            e.preventDefault();
+        try {
+            if (e.target.classList.contains('resize-handle')) {
+                this.isResizing = true;
+                this.currentResizeWidget = e.target.closest('.widget');
+                
+                if (!this.currentResizeWidget) {
+                    this.isResizing = false;
+                    return;
+                }
+                
+                this.currentResizeWidget.classList.add('resizing');
+                
+                // Store initial position and size
+                const rect = this.currentResizeWidget.getBoundingClientRect();
+                this.resizeStartX = e.clientX;
+                this.resizeStartY = e.clientY;
+                this.resizeStartWidth = rect.width;
+                this.resizeStartHeight = rect.height;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('Resize started for widget:', this.currentResizeWidget.dataset.widgetType);
+            }
+        } catch (error) {
+            console.error('Error in handleMouseDown:', error);
+            this.isResizing = false;
         }
     }
 
     handleMouseMove(e) {
-        if (!this.isResizing || !this.currentResizeWidget) return;
-        
-        // Simple resize implementation - could be enhanced
-        const rect = this.currentResizeWidget.getBoundingClientRect();
-        const minWidth = 300;
-        const minHeight = 200;
-        
-        const newWidth = Math.max(minWidth, e.clientX - rect.left);
-        const newHeight = Math.max(minHeight, e.clientY - rect.top);
-        
-        this.currentResizeWidget.style.width = `${newWidth}px`;
-        this.currentResizeWidget.style.height = `${newHeight}px`;
+        try {
+            if (!this.isResizing || !this.currentResizeWidget) return;
+            
+            const minWidth = 280;
+            const minHeight = 180;
+            const maxWidth = 800;
+            const maxHeight = 600;
+            
+            // Calculate new dimensions based on mouse movement
+            const deltaX = e.clientX - this.resizeStartX;
+            const deltaY = e.clientY - this.resizeStartY;
+            
+            const newWidth = Math.max(minWidth, Math.min(maxWidth, this.resizeStartWidth + deltaX));
+            const newHeight = Math.max(minHeight, Math.min(maxHeight, this.resizeStartHeight + deltaY));
+            
+            // Apply new size
+            this.currentResizeWidget.style.width = `${newWidth}px`;
+            this.currentResizeWidget.style.height = `${newHeight}px`;
+            
+            // Force chart resize if the widget contains one
+            this.resizeWidgetCharts(this.currentResizeWidget);
+            
+        } catch (error) {
+            console.error('Error in handleMouseMove:', error);
+        }
     }
 
     handleMouseUp(e) {
-        if (this.isResizing) {
-            this.isResizing = false;
-            if (this.currentResizeWidget) {
-                this.currentResizeWidget.classList.remove('resizing');
-                this.saveLayoutToStorage();
-                this.currentResizeWidget = null;
+        try {
+            if (this.isResizing) {
+                this.isResizing = false;
+                
+                if (this.currentResizeWidget) {
+                    this.currentResizeWidget.classList.remove('resizing');
+                    
+                    // Final chart resize
+                    this.resizeWidgetCharts(this.currentResizeWidget);
+                    
+                    this.saveLayoutToStorage();
+                    console.log('Resize completed for widget:', this.currentResizeWidget.dataset.widgetType);
+                    this.currentResizeWidget = null;
+                }
+                
+                // Clean up resize variables
+                this.resizeStartX = null;
+                this.resizeStartY = null;
+                this.resizeStartWidth = null;
+                this.resizeStartHeight = null;
             }
+        } catch (error) {
+            console.error('Error in handleMouseUp:', error);
+        }
+    }
+
+    resizeWidgetCharts(widget) {
+        try {
+            // Find canvas elements in the widget and trigger resize
+            const canvases = widget.querySelectorAll('canvas');
+            canvases.forEach(canvas => {
+                const chartId = canvas.id;
+                
+                // If it's a Chart.js chart, trigger resize
+                if (window.Chart && Chart.getChart && Chart.getChart(canvas)) {
+                    const chart = Chart.getChart(canvas);
+                    setTimeout(() => {
+                        chart.resize();
+                    }, 10);
+                }
+            });
+        } catch (error) {
+            console.error('Error resizing widget charts:', error);
         }
     }
 
     // Layout persistence
     saveLayoutToStorage() {
-        const widgets = Array.from(this.widgetsContainer.querySelectorAll('.widget')).map(widget => ({
-            id: widget.dataset.widgetId,
-            type: widget.dataset.widgetType,
-            size: widget.classList.contains('widget-large') ? 'large' : 
-                  widget.classList.contains('widget-small') ? 'small' : 'medium',
-            style: {
-                width: widget.style.width || '',
-                height: widget.style.height || ''
-            }
-        }));
-        
-        localStorage.setItem('dashboard-layout', JSON.stringify(widgets));
+        try {
+            if (!this.widgetsContainer) return;
+            
+            const widgets = Array.from(this.widgetsContainer.querySelectorAll('.widget')).map((widget, index) => ({
+                id: widget.dataset.widgetId,
+                type: widget.dataset.widgetType,
+                size: widget.classList.contains('widget-large') ? 'large' : 
+                      widget.classList.contains('widget-small') ? 'small' : 'medium',
+                style: {
+                    width: widget.style.width || '',
+                    height: widget.style.height || ''
+                },
+                order: index // Save order for proper reordering
+            }));
+            
+            localStorage.setItem('dashboard-layout', JSON.stringify(widgets));
+            console.log('Layout saved to storage:', widgets.length, 'widgets');
+        } catch (error) {
+            console.error('Error saving layout to storage:', error);
+        }
     }
 
     loadLayoutFromStorage() {
@@ -1400,25 +1749,47 @@ class InteractiveDashboard {
         try {
             const layout = JSON.parse(saved);
             
+            // Sort by order to maintain proper widget sequence
+            layout.sort((a, b) => (a.order || 0) - (b.order || 0));
+            
             // Only add widgets that don't already exist
             layout.forEach(widgetData => {
+                if (!widgetData.id || !widgetData.type) return;
+                
                 const existing = document.querySelector(`[data-widget-id="${widgetData.id}"]`);
                 if (existing) return;
                 
                 const template = this.widgetTemplates[widgetData.type];
-                if (!template) return;
+                if (!template) {
+                    console.warn('Unknown widget type:', widgetData.type);
+                    return;
+                }
                 
                 const widgetHtml = this.generateWidgetHtml(widgetData.id, widgetData.type, template);
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = widgetHtml;
                 const newWidget = tempDiv.firstElementChild;
                 
-                // Apply saved size and style
-                newWidget.classList.remove('widget-small', 'widget-medium', 'widget-large');
-                newWidget.classList.add(`widget-${widgetData.size}`);
+                if (!newWidget) return;
                 
-                if (widgetData.style.width) newWidget.style.width = widgetData.style.width;
-                if (widgetData.style.height) newWidget.style.height = widgetData.style.height;
+                // Apply saved size and style safely
+                newWidget.classList.remove('widget-small', 'widget-medium', 'widget-large');
+                const size = ['small', 'medium', 'large'].includes(widgetData.size) ? widgetData.size : 'medium';
+                newWidget.classList.add(`widget-${size}`);
+                
+                // Only apply custom dimensions if they're valid
+                if (widgetData.style && widgetData.style.width && widgetData.style.width !== '') {
+                    const width = parseInt(widgetData.style.width);
+                    if (!isNaN(width) && width >= 280 && width <= 800) {
+                        newWidget.style.width = widgetData.style.width;
+                    }
+                }
+                if (widgetData.style && widgetData.style.height && widgetData.style.height !== '') {
+                    const height = parseInt(widgetData.style.height);
+                    if (!isNaN(height) && height >= 180 && height <= 600) {
+                        newWidget.style.height = widgetData.style.height;
+                    }
+                }
                 
                 this.widgetsContainer.appendChild(newWidget);
                 this.initWidget(newWidget);
@@ -1428,8 +1799,12 @@ class InteractiveDashboard {
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
+            
+            console.log('Layout loaded from storage:', layout.length, 'widgets');
         } catch (e) {
             console.warn('Failed to load dashboard layout:', e);
+            // Clear corrupted layout
+            localStorage.removeItem('dashboard-layout');
         }
     }
 
@@ -1459,16 +1834,49 @@ class InteractiveDashboard {
 // Initialize dashboard when DOM is ready
 let interactiveDashboard;
 
+let updateInterval;
+
 function bootstrap() {
-    initNavigation();
-    initCharts();
-    
-    // Initialize interactive dashboard
-    interactiveDashboard = new InteractiveDashboard();
-    
-    showSection(currentSection);
-    updateLoop();
-    setInterval(updateLoop, 1000);
+    try {
+        console.log('🚀 Initializing Mission Center Dashboard...');
+        
+        // Initialize navigation first
+        initNavigation();
+        console.log('✅ Navigation initialized');
+        
+        // Initialize charts
+        initCharts();
+        console.log('✅ Charts initialized');
+        
+        // Initialize interactive dashboard
+        interactiveDashboard = new InteractiveDashboard();
+        console.log('✅ Interactive dashboard initialized');
+        
+        // Show initial section
+        showSection(currentSection);
+        console.log('✅ Initial section shown');
+        
+        // Start update loop with initial delay
+        setTimeout(() => {
+            updateLoop();
+            // Set up regular updates, clear any existing interval first
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(updateLoop, 1000);
+        }, 100);
+        
+        console.log('✅ Update loop started');
+        
+    } catch (error) {
+        console.error('❌ Fatal error during bootstrap:', error);
+        setConnectionState(false, 'Error de inicialización - Refresca la página');
+    }
 }
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+    if (updateInterval) {
+        clearInterval(updateInterval);
+    }
+});
 
 document.addEventListener("DOMContentLoaded", bootstrap);

@@ -2,18 +2,18 @@
     <article class="card">
         <h3><i data-lucide="link"></i> Estado de Conexión</h3>
         <div class="status-bar" role="status" aria-live="polite">
-            <div class="status-pill" id="status-pill">
-                <span class="status-indicator" id="status-indicator" aria-hidden="true"></span>
-                <span id="status-text">Conectando...</span>
+            <div class="status-pill" data-status="pill">
+                <span class="status-indicator" data-status="indicator" aria-hidden="true"></span>
+                <span data-status="text">Conectando...</span>
             </div>
             <div class="status-meta">
                 <div>
                     <span class="status-label">Actualización</span>
-                    <span class="status-value" id="last-update">--:--:--</span>
+                    <span class="status-value" data-status="last-update">--:--:--</span>
                 </div>
                 <div>
                     <span class="status-label">Permisos</span>
-                    <span class="status-value permissions-indicator" id="permissions-indicator">🔒 Verificando...</span>
+                    <span class="status-value permissions-indicator" data-status="permissions">🔒 Verificando...</span>
                 </div>
             </div>
         </div>
@@ -24,15 +24,15 @@
         <div class="system-meta-grid">
             <div>
                 <span class="status-label">Tiempo activo</span>
-                <span class="status-value" id="uptime-value">--</span>
+                <span class="status-value" data-status="uptime">--</span>
             </div>
             <div>
                 <span class="status-label">Host</span>
-                <span class="status-value" id="host-name">--</span>
+                <span class="status-value" data-status="host">--</span>
             </div>
             <div>
                 <span class="status-label">Sistema Operativo</span>
-                <span class="status-value" id="os-name">--</span>
+                <span class="status-value" data-status="os">--</span>
             </div>
         </div>
         <div class="system-grid" id="system-info"></div>

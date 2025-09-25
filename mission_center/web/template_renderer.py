@@ -30,20 +30,23 @@ class SimpleTemplateRenderer:
         if extends_match:
             base_template = extends_match.group(1)
             base_content = self.render(base_template, context)
-            
+
             # Extract blocks from current template
             blocks = self._extract_blocks(content)
-            
+
             # Replace blocks in base template
             for block_name, block_content in blocks.items():
+                processed_block = self._process_includes(block_content, context)
                 base_content = re.sub(
                     rf"{{% block {block_name} %}}.*?{{% endblock %}}",
-                    block_content,
+                    processed_block,
                     base_content,
                     flags=re.DOTALL
                 )
-            
-            return base_content
+
+            # Remove any remaining block definitions and process includes
+            base_content = re.sub(r"{% block (\w+) %}(.*?){% endblock %}", r"\2", base_content, flags=re.DOTALL)
+            return self._process_includes(base_content, context)
         
         # Handle includes
         content = self._process_includes(content, context)
