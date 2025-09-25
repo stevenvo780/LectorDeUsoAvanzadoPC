@@ -183,6 +183,46 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
+/* Indicadores de permisos */
+.permissions-indicator {
+    cursor: help;
+    transition: all var(--transition);
+}
+
+.permissions-indicator:hover {
+    transform: scale(1.02);
+}
+
+.permissions-indicator.perm-full {
+    color: #22c55e;
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.permissions-indicator.perm-good {
+    color: #84cc16;
+    text-shadow: 0 0 8px rgba(132, 204, 22, 0.4);
+}
+
+.permissions-indicator.perm-partial {
+    color: #f59e0b;
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.permissions-indicator.perm-limited {
+    color: #ef4444;
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.permissions-indicator.perm-container_good {
+    color: #06b6d4;
+    text-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+}
+
+.permissions-indicator.perm-container_limited {
+    color: #8b5cf6;
+    text-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+}
+
 .dashboard {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

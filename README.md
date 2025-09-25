@@ -4,14 +4,38 @@ Monitor avanzado estilo Mission Center de Windows, reconstruido como aplicación
 
 ## 🚀 Inicio rápido
 
+### Instalación
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+### Lanzamiento Recomendado (Con Permisos Completos)
+```bash
+./launch-privileged.sh
+```
+
+### Lanzamiento Alternativo
+```bash
 python -m mission_center.web.server
+# O directamente: python main.py
 ```
 
 La consola mostrará la URL local (por defecto `http://127.0.0.1:8080`). Abre esa dirección en el navegador para acceder al tablero.
+
+## 🔐 Sistema de Permisos
+
+Mission Center incluye detección automática de permisos y lanzamiento inteligente:
+
+- **🔓 Acceso completo**: Con privilegios de root (recomendado)
+- **🟢 Acceso bueno**: 80%+ de métricas disponibles
+- **🟡 Acceso parcial**: Funcionalidad básica garantizada
+- **🔒 Acceso limitado**: Sin sensores/temperaturas
+
+El indicador de permisos aparece en tiempo real en la interfaz web. Para acceso completo al hardware, usa `./launch-privileged.sh` que solicita permisos automáticamente vía PolicyKit o sudo.
+
+Ver [docs/permissions.md](docs/permissions.md) para detalles completos.
 
 ## ✨ Características principales
 

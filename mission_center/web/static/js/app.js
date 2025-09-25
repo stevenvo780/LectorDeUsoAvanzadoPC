@@ -16,6 +16,7 @@ const STATUS_ELEMENTS = {
     uptime: () => document.getElementById("uptime-value"),
     host: () => document.getElementById("host-name"),
     os: () => document.getElementById("os-name"),
+    permissions: () => document.getElementById("permissions-indicator"),
 };
 
 function formatBytes(value) {
@@ -123,6 +124,49 @@ function updateStatusMeta(current) {
         const virt = system.virtualization ? ` (${system.virtualization})` : "";
         os.textContent = summary ? `${summary}${virt}` : "--";
     }
+    
+    updatePermissionsIndicator(current?.permissions);
+}
+
+function updatePermissionsIndicator(permissions) {
+    const indicator = STATUS_ELEMENTS.permissions();
+    if (!indicator || !permissions) return;
+    
+    const level = permissions.permission_level || "limited";
+    const accessPercentage = permissions.access_percentage || 0;
+    
+    // Remover clases existentes
+    indicator.classList.remove("perm-full", "perm-good", "perm-partial", "perm-limited");
+    
+    // Añadir clase basada en el nivel
+    indicator.classList.add(`perm-${level}`);
+    
+    // Actualizar texto e icono
+    const icons = {
+        full: "🔓",
+        good: "🟢", 
+        partial: "🟡",
+        limited: "🔒",
+        container_good: "🐳",
+        container_limited: "📦"
+    };
+    
+    const labels = {
+        full: "Acceso completo",
+        good: "Acceso bueno", 
+        partial: "Acceso parcial",
+        limited: "Acceso limitado",
+        container_good: "Contenedor",
+        container_limited: "Contenedor limitado"
+    };
+    
+    const icon = icons[level] || "❓";
+    const label = labels[level] || "Desconocido";
+    
+    indicator.textContent = `${icon} ${label} (${accessPercentage}%)`;
+    indicator.title = permissions.warnings?.length > 0 
+        ? `Permisos: ${label}\n\nAdvertencias:\n${permissions.warnings.join('\n')}`
+        : `Permisos: ${label} - ${accessPercentage}% de rutas del sistema accesibles`;
 }
 
 function initCharts() {

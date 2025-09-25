@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import asdict
+import os
 import threading
 import time
 from typing import Any, Callable, Deque
@@ -90,6 +91,9 @@ class DataCollector:
         )
 
         self.current_data: dict[str, Any] = {}
+        
+        # Estado de permisos del sistema
+        self.permission_status: dict[str, Any] = self._check_system_permissions()
 
         self._providers: dict[str, Callable[[], Any]] = {
             "cpu": collect_cpu_snapshot,
@@ -107,6 +111,97 @@ class DataCollector:
             "system": collect_system_info,
         }
 
+    def _check_system_permissions(self) -> dict[str, Any]:
+        """Verifica el estado de permisos del sistema."""
+        permissions = {
+            "has_root": os.geteuid() == 0 if hasattr(os, 'geteuid') else False,
+            "accessible_paths": {},
+            "permission_level": "limited",
+            "warnings": [],
+            "is_container": self._detect_container_environment()
+        }
+        
+        # Rutas críticas del sistema a verificar
+        critical_paths = {
+            "proc_meminfo": "/proc/meminfo",
+            "proc_cpuinfo": "/proc/cpuinfo", 
+            "proc_stat": "/proc/stat",
+            "sys_dmi": "/sys/class/dmi/id/product_name",
+            "sys_hwmon": "/sys/class/hwmon",
+            "sys_cpu": "/sys/devices/system/cpu",
+            "sys_thermal": "/sys/class/thermal",
+            "proc_diskstats": "/proc/diskstats",
+            "sys_block": "/sys/block"
+        }
+        
+        accessible_count = 0
+        for key, path in critical_paths.items():
+            try:
+                if os.path.exists(path):
+                    if os.path.isdir(path):
+                        # Para directorios, verificar si podemos listar
+                        os.listdir(path)
+                    else:
+                        # Para archivos, intentar leer
+                        with open(path, 'r') as f:
+                            f.read(100)  # Leer los primeros 100 bytes
+                    permissions["accessible_paths"][key] = True
+                    accessible_count += 1
+                else:
+                    permissions["accessible_paths"][key] = False
+            except (PermissionError, OSError):
+                permissions["accessible_paths"][key] = False
+                if key in ["sys_hwmon", "sys_thermal", "sys_dmi"]:
+                    permissions["warnings"].append(f"Sin acceso a {path} - datos de hardware limitados")
+        
+        # Determinar el nivel de permisos
+        total_paths = len(critical_paths)
+        access_ratio = accessible_count / total_paths
+        
+        if permissions["has_root"]:
+            permissions["permission_level"] = "full"
+        elif access_ratio >= 0.8:
+            permissions["permission_level"] = "good"
+        elif access_ratio >= 0.5:
+            permissions["permission_level"] = "partial"
+        else:
+            permissions["permission_level"] = "limited"
+            permissions["warnings"].append("Permisos insuficientes - considere ejecutar con privilegios elevados")
+        
+        permissions["access_percentage"] = int(access_ratio * 100)
+        
+        # Ajustes para entornos contenedorizados
+        if permissions["is_container"]:
+            if access_ratio >= 0.6:  # Criterio más relajado para contenedores
+                permissions["permission_level"] = "container_good"
+                permissions["warnings"].append("Ejecutándose en contenedor - algunas métricas pueden estar limitadas")
+            else:
+                permissions["permission_level"] = "container_limited"
+                permissions["warnings"].append("Contenedor con acceso restringido al host")
+        
+        return permissions
+
+    def _detect_container_environment(self) -> bool:
+        """Detecta si estamos ejecutando en un entorno contenedorizado."""
+        container_indicators = [
+            os.path.exists("/.dockerenv"),
+            os.path.exists("/run/.containerenv"),
+            "container" in os.environ,
+            "DOCKER_CONTAINER" in os.environ,
+            "KUBERNETES_SERVICE_HOST" in os.environ,
+        ]
+        
+        # Verificar cgroups para contenedores
+        try:
+            with open("/proc/1/cgroup", "r") as f:
+                cgroup_content = f.read()
+                if any(indicator in cgroup_content for indicator in ["docker", "containerd", "lxc"]):
+                    container_indicators.append(True)
+        except (OSError, IOError):
+            pass
+        
+        return any(container_indicators)
+
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
             return
@@ -123,7 +218,9 @@ class DataCollector:
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
-            return _snapshot_to_dict(self.current_data)
+            data = _snapshot_to_dict(self.current_data)
+            data["permissions"] = self.permission_status
+            return data
 
     def history(self) -> dict[str, Any]:
         with self._lock:
