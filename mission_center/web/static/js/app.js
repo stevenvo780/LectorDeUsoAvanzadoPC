@@ -7,6 +7,16 @@ let currentSection = "overview";
 
 const NAV_ITEMS = Array.from(document.querySelectorAll(".nav-item"));
 
+const STATUS_ELEMENTS = {
+    pill: () => document.getElementById("status-pill"),
+    text: () => document.getElementById("status-text"),
+    indicator: () => document.getElementById("status-indicator"),
+    lastUpdate: () => document.getElementById("last-update"),
+    uptime: () => document.getElementById("uptime-value"),
+    host: () => document.getElementById("host-name"),
+    os: () => document.getElementById("os-name"),
+};
+
 function formatBytes(value) {
     if (!value && value !== 0) return "--";
     const units = ["B", "KB", "MB", "GB", "TB", "PB"];
@@ -72,6 +82,46 @@ function createLineChart(canvasId, options = {}) {
         data: { labels: Array(60).fill(""), datasets: [] },
     };
     return new Chart(canvas.getContext("2d"), Chart.helpers.merge(baseConfig, options));
+}
+
+function setConnectionState(isConnected) {
+    const pill = STATUS_ELEMENTS.pill();
+    const text = STATUS_ELEMENTS.text();
+    if (!pill || !text) return;
+    pill.classList.remove("online", "offline");
+    pill.classList.add(isConnected ? "online" : "offline");
+    pill.setAttribute("aria-label", isConnected ? "Conexión establecida" : "Conexión caída");
+    text.textContent = isConnected ? "Conectado ✅" : "Error de conexión ❌";
+}
+
+function updateStatusMeta(current) {
+    const lastUpdate = STATUS_ELEMENTS.lastUpdate();
+    if (lastUpdate) {
+        lastUpdate.textContent = new Date().toLocaleTimeString();
+    }
+
+    const system = current?.system || {};
+
+    const uptime = STATUS_ELEMENTS.uptime();
+    if (uptime) {
+        uptime.textContent = system.uptime_seconds != null ? formatDuration(system.uptime_seconds) : "--";
+    }
+
+    const host = STATUS_ELEMENTS.host();
+    if (host) {
+        host.textContent = system.hostname || "--";
+    }
+
+    const os = STATUS_ELEMENTS.os();
+    if (os) {
+        const summaryParts = [];
+        const osLabel = [system.os_name, system.os_version].filter(Boolean).join(" ");
+        if (osLabel) summaryParts.push(osLabel);
+        if (system.architecture) summaryParts.push(system.architecture);
+        const summary = summaryParts.join(" · ");
+        const virt = system.virtualization ? ` (${system.virtualization})` : "";
+        os.textContent = summary ? `${summary}${virt}` : "--";
+    }
 }
 
 function initCharts() {
@@ -489,7 +539,7 @@ function updateSystemInfo(data) {
                 ["OS", [system.os_name, system.os_version].filter(Boolean).join(" ")],
                 ["Kernel", system.kernel_version],
                 ["Arranque", system.boot_time ? new Date(system.boot_time * 1000).toLocaleString() : "--"],
-                ["Uptime", system.uptime_seconds ? formatDuration(system.uptime_seconds) : "--"],
+                ["Uptime", system.uptime_seconds != null ? formatDuration(system.uptime_seconds) : "--"],
             ],
         },
         {
@@ -541,7 +591,10 @@ function updateSystemInfo(data) {
 }
 
 function formatDuration(seconds) {
-    const total = Math.max(0, Math.floor(seconds));
+    if (seconds === null || seconds === undefined || Number.isNaN(seconds)) {
+        return "--";
+    }
+    const total = Math.max(0, Math.floor(Number(seconds)));
     const hours = Math.floor(total / 3600);
     const minutes = Math.floor((total % 3600) / 60);
     const secs = total % 60;
@@ -562,8 +615,8 @@ async function updateLoop() {
             fetchJSON("/api/current"),
             fetchJSON("/api/history"),
         ]);
-        document.getElementById("status-text").textContent = "Conectado ✅";
-        document.getElementById("last-update").textContent = new Date().toLocaleTimeString();
+        setConnectionState(true);
+        updateStatusMeta(current);
 
         updateOverview(current);
         updatePerformance(current);
@@ -572,7 +625,7 @@ async function updateLoop() {
         updateSystemInfo(current);
         updateHistoryCharts(history);
     } catch (error) {
-        document.getElementById("status-text").textContent = "Error de conexión ❌";
+        setConnectionState(false);
         console.error("Fetch error", error);
     }
 }
