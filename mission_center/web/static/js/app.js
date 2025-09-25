@@ -744,66 +744,115 @@ function updateGPUGrid(gpu) {
     const grid = document.getElementById("gpu-cards-grid");
     
     if (gpus.length === 0) {
-        grid.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 40px;">No hay GPUs detectadas</div>';
+        if (!grid.querySelector('.no-gpus-message')) {
+            grid.innerHTML = '<div class="no-gpus-message" style="text-align: center; color: var(--text-secondary); padding: 40px;">No hay GPUs detectadas</div>';
+        }
         return;
     }
 
-    // Limpiar gráficos GPU existentes
-    gpuCharts.forEach(chart => chart.destroy());
-    gpuCharts.clear();
-    grid.innerHTML = "";
-
-    gpus.forEach((gpuData, index) => {
-        const card = document.createElement("div");
-        card.className = "gpu-card";
+    // Verificar si necesitamos recrear las tarjetas (número de GPUs cambió)
+    const existingCards = grid.querySelectorAll('.gpu-card');
+    if (existingCards.length !== gpus.length) {
+        // Solo recrear si el número de GPUs ha cambiado
+        gpuCharts.forEach(chart => chart.destroy());
+        gpuCharts.clear();
+        grid.innerHTML = "";
         
+        gpus.forEach((gpuData, index) => {
+            const card = createGPUCard(gpuData, index);
+            grid.appendChild(card);
+        });
+    } else {
+        // Solo actualizar los valores existentes
+        gpus.forEach((gpuData, index) => {
+            updateGPUCardData(existingCards[index], gpuData, index);
+        });
+    }
+}
+
+function createGPUCard(gpuData, index) {
+    const card = document.createElement("div");
+    card.className = "gpu-card";
+    card.setAttribute('data-gpu-index', index);
+    
+    const memoryUsedGB = (gpuData.memory_used_bytes / (1024 * 1024 * 1024)).toFixed(1);
+    const memoryTotalGB = (gpuData.memory_total_bytes / (1024 * 1024 * 1024)).toFixed(1);
+    
+    card.innerHTML = `
+        <div class="gpu-header">
+            <h4 class="gpu-title">${gpuData.name}</h4>
+            <span class="gpu-vendor">${gpuData.vendor}</span>
+        </div>
+        <div class="gpu-metrics">
+            <div class="gpu-metric">
+                <span class="gpu-metric-label">Uso GPU</span>
+                <span class="gpu-metric-value gpu-utilization-value">${gpuData.utilization_percent.toFixed(1)}%</span>
+            </div>
+            <div class="gpu-metric">
+                <span class="gpu-metric-label">Temperatura</span>
+                <span class="gpu-metric-value gpu-temperature-value">${gpuData.temperature_celsius.toFixed(0)}°C</span>
+            </div>
+            <div class="gpu-metric">
+                <span class="gpu-metric-label">Memoria</span>
+                <span class="gpu-metric-value gpu-memory-value">${memoryUsedGB}GB / ${memoryTotalGB}GB</span>
+            </div>
+            <div class="gpu-metric">
+                <span class="gpu-metric-label">Clock GPU</span>
+                <span class="gpu-metric-value gpu-clock-value">${gpuData.extra?.graphics_clock_mhz?.toFixed(0) || '--'} MHz</span>
+            </div>
+        </div>
+        <div class="gpu-chart">
+            <canvas class="gpu-mini-chart" id="gpu-chart-${index}" width="300" height="120"></canvas>
+        </div>
+    `;
+    
+    // Crear historial si no existe
+    if (!gpuHistory.has(index)) {
+        gpuHistory.set(index, Array(60).fill(gpuData.utilization_percent));
+    }
+    
+    return card;
+}
+
+function updateGPUCardData(card, gpuData, index) {
+    // Actualizar solo los valores que cambian
+    const utilizationEl = card.querySelector('.gpu-utilization-value');
+    const temperatureEl = card.querySelector('.gpu-temperature-value');
+    const memoryEl = card.querySelector('.gpu-memory-value');
+    const clockEl = card.querySelector('.gpu-clock-value');
+    
+    if (utilizationEl) utilizationEl.textContent = `${gpuData.utilization_percent.toFixed(1)}%`;
+    if (temperatureEl) temperatureEl.textContent = `${gpuData.temperature_celsius.toFixed(0)}°C`;
+    
+    if (memoryEl) {
         const memoryUsedGB = (gpuData.memory_used_bytes / (1024 * 1024 * 1024)).toFixed(1);
         const memoryTotalGB = (gpuData.memory_total_bytes / (1024 * 1024 * 1024)).toFixed(1);
-        const memoryPercent = ((gpuData.memory_used_bytes / gpuData.memory_total_bytes) * 100).toFixed(1);
-        
-        card.innerHTML = `
-            <div class="gpu-header">
-                <h4 class="gpu-title">${gpuData.name}</h4>
-                <span class="gpu-vendor">${gpuData.vendor}</span>
-            </div>
-            <div class="gpu-metrics">
-                <div class="gpu-metric">
-                    <span class="gpu-metric-label">Uso GPU</span>
-                    <span class="gpu-metric-value">${gpuData.utilization_percent.toFixed(1)}%</span>
-                </div>
-                <div class="gpu-metric">
-                    <span class="gpu-metric-label">Temperatura</span>
-                    <span class="gpu-metric-value">${gpuData.temperature_celsius.toFixed(0)}°C</span>
-                </div>
-                <div class="gpu-metric">
-                    <span class="gpu-metric-label">Memoria</span>
-                    <span class="gpu-metric-value">${memoryUsedGB}GB / ${memoryTotalGB}GB</span>
-                </div>
-                <div class="gpu-metric">
-                    <span class="gpu-metric-label">Clock GPU</span>
-                    <span class="gpu-metric-value">${gpuData.extra?.graphics_clock_mhz?.toFixed(0) || '--'} MHz</span>
-                </div>
-            </div>
-            <div class="gpu-chart">
-                <canvas class="gpu-mini-chart" id="gpu-chart-${index}" width="300" height="120"></canvas>
-            </div>
-        `;
-        
-        grid.appendChild(card);
-        
-        // Crear historial si no existe
-        if (!gpuHistory.has(index)) {
-            gpuHistory.set(index, Array(60).fill(gpuData.utilization_percent));
-        }
-        
-        // Actualizar historial
-        const history = gpuHistory.get(index);
-        if (history.length >= 60) {
-            history.shift();
-        }
-        history.push(gpuData.utilization_percent);
-        
-        // Crear gráfico
+        memoryEl.textContent = `${memoryUsedGB}GB / ${memoryTotalGB}GB`;
+    }
+    
+    if (clockEl) {
+        clockEl.textContent = `${gpuData.extra?.graphics_clock_mhz?.toFixed(0) || '--'} MHz`;
+    }
+    
+    // Actualizar historial
+    if (!gpuHistory.has(index)) {
+        gpuHistory.set(index, Array(60).fill(gpuData.utilization_percent));
+    }
+    
+    const history = gpuHistory.get(index);
+    if (history.length >= 60) {
+        history.shift();
+    }
+    history.push(gpuData.utilization_percent);
+    
+    // Actualizar gráfico existente o crear nuevo si no existe
+    const existingChart = gpuCharts.get(index);
+    if (existingChart) {
+        // Solo actualizar datos del gráfico existente
+        existingChart.data.datasets[0].data = [...history];
+        existingChart.update('none'); // Actualización sin animación para evitar saltos
+    } else {
+        // Crear gráfico solo si no existe
         const canvas = document.getElementById(`gpu-chart-${index}`);
         if (canvas) {
             const ctx = canvas.getContext('2d');
@@ -830,12 +879,13 @@ function updateGPUGrid(gpu) {
                         x: { display: false },
                         y: { display: false, min: 0, max: 100 }
                     },
-                    elements: { point: { radius: 0 } }
+                    elements: { point: { radius: 0 } },
+                    animation: false // Desactivar animaciones para evitar saltos
                 }
             });
             gpuCharts.set(index, chart);
         }
-    });
+    }
 }
 
 function getDeviceType(deviceName) {
@@ -849,11 +899,11 @@ function updateIODevicesGrid(io) {
     const grid = document.getElementById("io-devices-grid");
     
     if (!io?.per_device || Object.keys(io.per_device).length === 0) {
-        grid.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 40px;">No hay dispositivos I/O detectados</div>';
+        if (!grid.querySelector('.no-io-message')) {
+            grid.innerHTML = '<div class="no-io-message" style="text-align: center; color: var(--text-secondary); padding: 40px;">No hay dispositivos I/O detectados</div>';
+        }
         return;
     }
-
-    grid.innerHTML = "";
 
     // Filtrar solo dispositivos principales (evitar particiones menores)
     const devices = Object.entries(io.per_device)
@@ -866,47 +916,87 @@ function updateIODevicesGrid(io) {
         })
         .slice(0, 12); // Limitar a 12 dispositivos
 
-    devices.forEach(([deviceName, stats]) => {
-        const card = document.createElement("div");
-        card.className = "io-device-card";
+    const existingCards = grid.querySelectorAll('.io-device-card');
+    
+    // Verificar si necesitamos recrear las tarjetas (número de dispositivos cambió)
+    if (existingCards.length !== devices.length) {
+        grid.innerHTML = "";
         
-        const deviceType = getDeviceType(deviceName);
-        const readRate = formatBytes(stats.read_bytes_per_sec);
-        const writeRate = formatBytes(stats.write_bytes_per_sec);
-        const readOps = stats.read_count_per_sec?.toFixed(1) || '0.0';
-        const writeOps = stats.write_count_per_sec?.toFixed(1) || '0.0';
-        const utilization = Math.min(100, stats.utilization_percent || 0);
-        
-        card.innerHTML = `
-            <div class="io-device-header">
-                <span class="io-device-name">${deviceName}</span>
-                <span class="io-device-type ${deviceType}">${deviceType.toUpperCase()}</span>
+        devices.forEach(([deviceName, stats]) => {
+            const card = createIODeviceCard(deviceName, stats);
+            grid.appendChild(card);
+        });
+    } else {
+        // Solo actualizar los valores existentes
+        devices.forEach(([deviceName, stats], index) => {
+            if (existingCards[index]) {
+                updateIODeviceCardData(existingCards[index], deviceName, stats);
+            }
+        });
+    }
+}
+
+function createIODeviceCard(deviceName, stats) {
+    const card = document.createElement("div");
+    card.className = "io-device-card";
+    card.setAttribute('data-device-name', deviceName);
+    
+    const deviceType = getDeviceType(deviceName);
+    
+    card.innerHTML = `
+        <div class="io-device-header">
+            <span class="io-device-name">${deviceName}</span>
+            <span class="io-device-type ${deviceType}">${deviceType.toUpperCase()}</span>
+        </div>
+        <div class="io-device-stats">
+            <div class="io-stat">
+                <span class="io-stat-label">Lectura</span>
+                <span class="io-stat-value io-read-value">--</span>
             </div>
-            <div class="io-device-stats">
-                <div class="io-stat">
-                    <span class="io-stat-label">Lectura</span>
-                    <span class="io-stat-value">${readRate}/s</span>
-                </div>
-                <div class="io-stat">
-                    <span class="io-stat-label">Escritura</span>
-                    <span class="io-stat-value">${writeRate}/s</span>
-                </div>
-                <div class="io-stat">
-                    <span class="io-stat-label">R-IOPS</span>
-                    <span class="io-stat-value">${readOps}</span>
-                </div>
-                <div class="io-stat">
-                    <span class="io-stat-label">W-IOPS</span>
-                    <span class="io-stat-value">${writeOps}</span>
-                </div>
+            <div class="io-stat">
+                <span class="io-stat-label">Escritura</span>
+                <span class="io-stat-value io-write-value">--</span>
             </div>
-            <div class="io-utilization-bar">
-                <div class="io-utilization-fill" style="width: ${utilization}%"></div>
+            <div class="io-stat">
+                <span class="io-stat-label">R-IOPS</span>
+                <span class="io-stat-value io-read-iops">--</span>
             </div>
-        `;
-        
-        grid.appendChild(card);
-    });
+            <div class="io-stat">
+                <span class="io-stat-label">W-IOPS</span>
+                <span class="io-stat-value io-write-iops">--</span>
+            </div>
+        </div>
+        <div class="io-utilization-bar">
+            <div class="io-utilization-fill"></div>
+        </div>
+    `;
+    
+    // Actualizar con los datos iniciales
+    updateIODeviceCardData(card, deviceName, stats);
+    
+    return card;
+}
+
+function updateIODeviceCardData(card, deviceName, stats) {
+    const readRateEl = card.querySelector('.io-read-value');
+    const writeRateEl = card.querySelector('.io-write-value');
+    const readIopsEl = card.querySelector('.io-read-iops');
+    const writeIopsEl = card.querySelector('.io-write-iops');
+    const utilizationFillEl = card.querySelector('.io-utilization-fill');
+    
+    const readRate = formatBytes(stats.read_bytes_per_sec);
+    const writeRate = formatBytes(stats.write_bytes_per_sec);
+    const readOps = stats.read_count_per_sec?.toFixed(1) || '0.0';
+    const writeOps = stats.write_count_per_sec?.toFixed(1) || '0.0';
+    const utilization = Math.min(100, stats.utilization_percent || 0);
+    
+    if (readRateEl) readRateEl.textContent = `${readRate}/s`;
+    if (writeRateEl) writeRateEl.textContent = `${writeRate}/s`;
+    if (readIopsEl) readIopsEl.textContent = readOps;
+    if (writeIopsEl) writeIopsEl.textContent = writeOps;
+    if (utilizationFillEl) {
+        utilizationFillEl.style.width = `${utilization}%`;
+    }
 }
 
 function bootstrap() {

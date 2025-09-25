@@ -294,6 +294,10 @@ body {
     font-size: 1.2rem;
     font-weight: 600;
     color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    min-width: 70px;
+    text-align: right;
+    transition: color var(--transition);
 }
 
 .chart-container {
@@ -613,6 +617,9 @@ body {
     font-weight: 700;
     color: var(--text-primary);
     font-variant-numeric: tabular-nums;
+    min-width: 80px;
+    text-align: right;
+    transition: color var(--transition);
 }
 
 .gpu-chart {
@@ -717,6 +724,9 @@ body {
     font-weight: 600;
     color: var(--text-primary);
     font-variant-numeric: tabular-nums;
+    min-width: 65px;
+    text-align: right;
+    transition: color var(--transition);
 }
 
 .io-utilization-bar {
