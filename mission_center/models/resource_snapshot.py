@@ -109,6 +109,7 @@ class IOSnapshot:
     write_bytes_per_sec: float
     read_count_delta: int
     write_count_delta: int
+    per_device: dict[str, dict[str, float]] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
