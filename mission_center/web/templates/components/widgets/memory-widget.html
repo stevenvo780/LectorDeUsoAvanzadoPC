@@ -1,5 +1,5 @@
 <!-- Memory Widget -->
-<div class="widget widget-medium" data-widget-id="memory" data-widget-type="memory" draggable="true">
+<div class="widget widget-base widget-medium" data-widget-id="memory" data-widget-type="memory" data-can-resize="true" data-grid-column-span="1" data-grid-row-span="1" draggable="true">
     <div class="widget-header">
         <h3><i data-lucide="memory-stick"></i> Memoria</h3>
         <div class="widget-controls">
@@ -12,22 +12,22 @@
         </div>
     </div>
     <div class="widget-content">
-        <div class="metric-grid">
             <div class="metric">
                 <div class="metric-label">RAM usada</div>
-                <div class="metric-value" id="mem-usage">--</div>
+                <div class="metric-value" data-metric="mem-usage">--</div>
             </div>
             <div class="metric">
                 <div class="metric-label">RAM total</div>
-                <div class="metric-value" id="mem-total">--</div>
+                <div class="metric-value" data-metric="mem-total">--</div>
             </div>
             <div class="metric">
                 <div class="metric-label">Swap usada</div>
-                <div class="metric-value" id="swap-usage">--</div>
+                <div class="metric-value" data-metric="swap-usage">--</div>
             </div>
             <div class="metric">
                 <div class="metric-label">Swap total</div>
-                <div class="metric-value" id="swap-total">--</div>
+                <div class="metric-value" data-metric="swap-total">--</div>
+            </div>
             </div>
         </div>
         <div class="chart-container">

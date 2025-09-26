@@ -47,6 +47,14 @@ function updateSnapshot(name, value) {
     });
 }
 
+function updateMetric(metricId, value) {
+    const nodes = document.querySelectorAll(`[data-metric="${metricId}"]`);
+    if (!nodes.length) return;
+    updateElements(nodes, (node) => {
+        node.textContent = value;
+    });
+}
+
 function formatBytes(value) {
     if (!value && value !== 0) return "--";
     const units = ["B", "KB", "MB", "GB", "TB", "PB"];
@@ -425,42 +433,95 @@ function initCharts() {
 
 function updateOverview(data) {
     const { cpu, memory, disk, io, network, gpu } = data;
-    if (cpu) {
-        document.getElementById("cpu-usage").textContent = `${cpu.usage_percent?.toFixed(1) ?? "--"}%`;
-        document.getElementById("cpu-freq").textContent = formatFrequency(cpu.frequency_current_mhz);
-        document.getElementById("cpu-cores").textContent = formatNumber(cpu.logical_cores);
-        document.getElementById("cpu-physical").textContent = formatNumber(cpu.physical_cores);
-        updateSnapshot("cpuUsage", `${cpu.usage_percent?.toFixed(1) ?? "--"}%`);
-        updateSnapshot("cpuFrequency", formatFrequency(cpu.frequency_current_mhz));
-    }
-    if (memory) {
-        document.getElementById("mem-usage").textContent = `${memory.percent?.toFixed(1) ?? "--"}%`;
-        document.getElementById("mem-total").textContent = formatBytes(memory.total_bytes);
-        document.getElementById("swap-usage").textContent = `${memory.swap_percent?.toFixed(1) ?? "--"}%`;
-        document.getElementById("swap-total").textContent = formatBytes(memory.swap_total_bytes);
-    updateSnapshot("memoryUsage", `${memory.percent?.toFixed(1) ?? "--"}% de ${formatBytes(memory.total_bytes)}`);
-    updateSnapshot("swapUsage", `${memory.swap_percent?.toFixed(1) ?? "--"}% de ${formatBytes(memory.swap_total_bytes)}`);
-    }
+
+    const cpuUsage = cpu?.usage_percent != null ? `${cpu.usage_percent.toFixed(1)}%` : "--";
+    const cpuFreq = formatFrequency(cpu?.frequency_current_mhz);
+    updateMetric("cpu-usage", cpuUsage);
+    updateMetric("cpu-freq", cpuFreq);
+    updateMetric("cpu-cores", formatNumber(cpu?.logical_cores));
+    updateMetric("cpu-physical", formatNumber(cpu?.physical_cores));
+    updateSnapshot("cpuUsage", cpuUsage);
+    updateSnapshot("cpuFrequency", cpuFreq);
+
+    const memoryUsage = memory?.percent != null ? `${memory.percent.toFixed(1)}%` : "--";
+    const memoryTotal = formatBytes(memory?.total_bytes);
+    const swapUsage = memory?.swap_percent != null ? `${memory.swap_percent.toFixed(1)}%` : "--";
+    const swapTotal = formatBytes(memory?.swap_total_bytes);
+    updateMetric("mem-usage", memoryUsage);
+    updateMetric("mem-total", memoryTotal);
+    updateMetric("swap-usage", swapUsage);
+    updateMetric("swap-total", swapTotal);
+    const memorySnapshot = memory ? `${memoryUsage} de ${memoryTotal}` : "--";
+    const swapSnapshot = memory ? `${swapUsage} de ${swapTotal}` : "--";
+    updateSnapshot("memoryUsage", memorySnapshot);
+    updateSnapshot("swapUsage", swapSnapshot);
+
     if (disk && io) {
         const totalRead = disk.devices?.reduce((sum, dev) => sum + (dev.read_bytes_per_sec || 0), 0) || 0;
         const totalWrite = disk.devices?.reduce((sum, dev) => sum + (dev.write_bytes_per_sec || 0), 0) || 0;
-        document.getElementById("disk-read").textContent = `${formatBytes(totalRead)}/s`;
-        document.getElementById("disk-write").textContent = `${formatBytes(totalWrite)}/s`;
-        document.getElementById("disk-count").textContent = formatNumber(disk.devices?.length ?? 0);
-        document.getElementById("io-total").textContent = `${formatBytes(io.read_bytes_per_sec + io.write_bytes_per_sec)} /s`;
-    updateSnapshot("diskIO", `${formatBytes(totalRead)}/s ↑ · ${formatBytes(totalWrite)}/s ↓`);
+        const ioTotal = io.read_bytes_per_sec + io.write_bytes_per_sec;
+        updateMetric("disk-read", `${formatBytes(totalRead)}/s`);
+        updateMetric("disk-write", `${formatBytes(totalWrite)}/s`);
+        updateMetric("disk-count", formatNumber(disk.devices?.length ?? 0));
+        updateMetric("io-total", `${formatBytes(ioTotal)} /s`);
+        updateSnapshot("diskIO", `${formatBytes(totalRead)}/s ↑ · ${formatBytes(totalWrite)}/s ↓`);
+    } else {
+        updateMetric("disk-read", "--");
+        updateMetric("disk-write", "--");
+        updateMetric("disk-count", "--");
+        updateMetric("io-total", "--");
     }
+
     if (network) {
         const totalSent = network.interfaces?.reduce((sum, iface) => sum + (iface.sent_bytes_per_sec || 0), 0) || 0;
         const totalRecv = network.interfaces?.reduce((sum, iface) => sum + (iface.recv_bytes_per_sec || 0), 0) || 0;
-        document.getElementById("net-sent").textContent = `${formatBytes(totalSent)}/s`;
-        document.getElementById("net-recv").textContent = `${formatBytes(totalRecv)}/s`;
-        document.getElementById("net-interfaces").textContent = formatNumber(
-            network.interfaces?.filter((iface) => iface.is_up).length ?? 0,
+        updateMetric("net-sent", `${formatBytes(totalSent)}/s`);
+        updateMetric("net-recv", `${formatBytes(totalRecv)}/s`);
+        updateMetric(
+            "net-interfaces",
+            formatNumber(network.interfaces?.filter((iface) => iface.is_up).length ?? 0),
         );
-    updateSnapshot("netIO", `${formatBytes(totalSent)}/s ↑ · ${formatBytes(totalRecv)}/s ↓`);
+        updateSnapshot("netIO", `${formatBytes(totalSent)}/s ↑ · ${formatBytes(totalRecv)}/s ↓`);
+    } else {
+        updateMetric("net-sent", "--");
+        updateMetric("net-recv", "--");
+        updateMetric("net-interfaces", "--");
     }
-    document.getElementById("gpu-count").textContent = formatNumber(gpu?.length ?? 0);
+
+    const gpuList = Array.isArray(gpu) ? gpu : [];
+    updateMetric("gpu-count", formatNumber(gpuList.length));
+
+    if (gpuList.length) {
+        const totalUsage = gpuList.reduce((sum, card) => sum + (card.utilization_percent || 0), 0);
+        const avgUsage = totalUsage / gpuList.length;
+        const totalMemory = gpuList.reduce((sum, card) => sum + (card.memory_total_bytes || 0), 0);
+        const usedMemory = gpuList.reduce((sum, card) => sum + (card.memory_used_bytes || 0), 0);
+        const maxTemp = gpuList.reduce(
+            (max, card) => (card.temperature_celsius != null ? Math.max(max, card.temperature_celsius) : max),
+            Number.NEGATIVE_INFINITY,
+        );
+        const avgClock = (() => {
+            const clocks = gpuList
+                .map((card) => card?.extra?.graphics_clock_mhz)
+                .filter((value) => typeof value === "number" && !Number.isNaN(value));
+            if (!clocks.length) return null;
+            return clocks.reduce((sum, value) => sum + value, 0) / clocks.length;
+        })();
+
+        updateMetric("gpu-usage", `${avgUsage.toFixed(1)}%`);
+        if (totalMemory > 0) {
+            updateMetric("gpu-memory", `${formatBytes(usedMemory)} / ${formatBytes(totalMemory)}`);
+        } else {
+            updateMetric("gpu-memory", usedMemory ? formatBytes(usedMemory) : "--");
+        }
+        updateMetric("gpu-temp", maxTemp > Number.NEGATIVE_INFINITY ? `${maxTemp.toFixed(1)} °C` : "--");
+        updateMetric("gpu-clock", avgClock != null ? `${avgClock.toFixed(0)} MHz` : "--");
+    } else {
+        updateMetric("gpu-usage", "--");
+        updateMetric("gpu-memory", "--");
+        updateMetric("gpu-temp", "--");
+        updateMetric("gpu-clock", "--");
+    }
 }
 
 function ensureMiniChart(coreId, label) {
@@ -1179,6 +1240,8 @@ function updateIODeviceCardData(card, deviceName, stats) {
 }
 
 // Interactive Dashboard System
+const DASHBOARD_LAYOUT_KEY = 'mission-center-dashboard-layout';
+const LEGACY_LAYOUT_KEYS = ['dashboard-layout'];
 class InteractiveDashboard {
     constructor() {
         this.widgetsContainer = document.getElementById('widgets-container');
@@ -1220,7 +1283,7 @@ class InteractiveDashboard {
             gpu: {
                 icon: 'zap',
                 title: 'GPU',
-                metrics: ['gpu-usage', 'gpu-memory', 'gpu-temp', 'gpu-power'],
+                metrics: ['gpu-usage', 'gpu-memory', 'gpu-temp', 'gpu-clock'],
                 chartId: 'gpuChart'
             },
             processes: {
@@ -1248,8 +1311,106 @@ class InteractiveDashboard {
             return;
         }
 
+        this.initializeExistingWidgets();
         this.initEventListeners();
         this.loadLayoutFromStorage();
+    }
+
+    initializeExistingWidgets() {
+        try {
+            const widgets = this.widgetsContainer?.querySelectorAll('.widget') || [];
+            widgets.forEach((widget) => {
+                this.ensureWidgetStructure(widget);
+                this.initWidget(widget);
+                this.updateDatasetSizing(widget);
+            });
+        } catch (error) {
+            console.error('Error initializing existing widgets:', error);
+        }
+    }
+
+    ensureWidgetStructure(widget) {
+        if (!widget) return;
+
+        widget.classList.add('widget-base');
+
+        if (!widget.dataset.canResize) {
+            widget.dataset.canResize = 'true';
+        }
+
+        if (!widget.dataset.gridColumnSpan) {
+            widget.dataset.gridColumnSpan = '1';
+        }
+
+        if (!widget.dataset.gridRowSpan) {
+            widget.dataset.gridRowSpan = '1';
+        }
+
+        if (!widget.dataset.size) {
+            if (widget.classList.contains('widget-large')) {
+                widget.dataset.size = 'large';
+            } else if (widget.classList.contains('widget-small')) {
+                widget.dataset.size = 'small';
+            } else {
+                widget.dataset.size = 'medium';
+            }
+        }
+
+        if (!widget.getAttribute('draggable')) {
+            widget.setAttribute('draggable', 'true');
+        }
+
+        if (!widget.querySelector('.widget-controls [data-action="resize"]')) {
+            const controls = widget.querySelector('.widget-controls');
+            if (controls) {
+                const resizeBtn = document.createElement('button');
+                resizeBtn.className = 'widget-btn';
+                resizeBtn.dataset.action = 'resize';
+                resizeBtn.title = 'Redimensionar';
+                resizeBtn.innerHTML = '<i data-lucide="maximize-2"></i>';
+                controls.prepend(resizeBtn);
+            }
+        }
+
+        if (!widget.querySelector('.resize-handles')) {
+            const handles = document.createElement('div');
+            handles.className = 'resize-handles';
+            const handle = document.createElement('div');
+            handle.className = 'resize-handle resize-se';
+            handles.appendChild(handle);
+            widget.appendChild(handles);
+        }
+    }
+
+    applyWidgetLayoutState(widget, widgetData) {
+        if (!widget || !widgetData) return;
+
+        const sizes = ['small', 'medium', 'large'];
+        widget.classList.remove('widget-small', 'widget-medium', 'widget-large');
+        const size = sizes.includes(widgetData.size) ? widgetData.size : 'medium';
+        widget.classList.add(`widget-${size}`);
+        widget.dataset.size = size;
+
+        const width = parseInt(widgetData.style?.width ?? '', 10);
+        widget.style.width = !Number.isNaN(width) && width >= 280 && width <= 800 ? widgetData.style.width : '';
+
+        const height = parseInt(widgetData.style?.height ?? '', 10);
+        widget.style.height = !Number.isNaN(height) && height >= 180 && height <= 600 ? widgetData.style.height : '';
+
+        const canResize = widgetData.canResize !== false;
+        widget.dataset.canResize = canResize ? 'true' : 'false';
+
+        const columnSpan = parseInt(widgetData.grid?.columnSpan ?? '', 10);
+        if (Number.isInteger(columnSpan) && columnSpan > 0) {
+            widget.dataset.gridColumnSpan = String(columnSpan);
+        }
+
+        const rowSpan = parseInt(widgetData.grid?.rowSpan ?? '', 10);
+        if (Number.isInteger(rowSpan) && rowSpan > 0) {
+            widget.dataset.gridRowSpan = String(rowSpan);
+        }
+
+    this.updateDatasetSizing(widget);
     }
 
     initEventListeners() {
@@ -1266,6 +1427,40 @@ class InteractiveDashboard {
         // Widget option selection
         document.querySelectorAll('.widget-option').forEach(option => {
             option.addEventListener('click', (e) => this.selectWidgetType(e));
+        });
+
+        // Delegate widget control actions as fallback for pre-rendered widgets
+        this.widgetsContainer?.addEventListener('click', (event) => {
+            const actionButton = event.target.closest('[data-action]');
+            if (!actionButton || !this.widgetsContainer.contains(actionButton)) {
+                return;
+            }
+
+            const widget = actionButton.closest('.widget');
+            if (!widget) {
+                return;
+            }
+
+            if (widget.dataset.controlsBound === 'true') {
+                return;
+            }
+
+            const action = actionButton.dataset.action;
+            if (!action) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (action === 'resize') {
+                if (widget.dataset.canResize === 'false') {
+                    return;
+                }
+                this.toggleWidgetSize(widget);
+            } else if (action === 'remove') {
+                this.removeWidget(widget);
+            }
         });
 
         // Global drag and drop events
@@ -1330,6 +1525,7 @@ class InteractiveDashboard {
         
         this.widgetsContainer.appendChild(newWidget);
         this.initWidget(newWidget);
+        this.updateDatasetSizing(newWidget);
         
         // Re-initialize any charts if needed
         if (template.chartId) {
@@ -1346,15 +1542,12 @@ class InteractiveDashboard {
     }
 
     generateWidgetHtml(widgetId, widgetType, template) {
-        const metricsHtml = template.metrics.map(metricId => {
-            const [category, metric] = metricId.split('-');
-            return `
-                <div class="metric">
-                    <div class="metric-label">${this.getMetricLabel(metricId)}</div>
-                    <div class="metric-value" id="${metricId}">--</div>
-                </div>
-            `;
-        }).join('');
+        const metricsHtml = template.metrics.map(metricId => `
+            <div class="metric">
+                <div class="metric-label">${this.getMetricLabel(metricId)}</div>
+                <div class="metric-value" data-metric="${metricId}">--</div>
+            </div>
+        `).join('');
 
         const chartHtml = template.chartId ? `
             <div class="chart-container">
@@ -1363,7 +1556,7 @@ class InteractiveDashboard {
         ` : '';
 
         return `
-            <div class="widget widget-medium" data-widget-id="${widgetId}" data-widget-type="${widgetType}" draggable="true">
+            <div class="widget widget-base widget-medium" data-widget-id="${widgetId}" data-widget-type="${widgetType}" data-can-resize="true" data-grid-column-span="1" data-grid-row-span="1" draggable="true">
                 <div class="widget-header">
                     <h3><i data-lucide="${template.icon}"></i> ${template.title}</h3>
                     <div class="widget-controls">
@@ -1405,12 +1598,24 @@ class InteractiveDashboard {
             'net-sent': 'Subida',
             'net-recv': 'Bajada',
             'net-interfaces': 'Interfaces',
-            'gpu-count': 'GPUs'
+            'gpu-count': 'GPUs',
+            'gpu-usage': 'Uso GPU',
+            'gpu-memory': 'Memoria',
+            'gpu-temp': 'Temperatura',
+            'gpu-clock': 'Reloj gráfico'
         };
         return labels[metricId] || metricId;
     }
 
     initWidget(widget) {
+        if (!widget || widget.dataset.controlsBound === 'true') {
+            return;
+        }
+
+        this.ensureWidgetStructure(widget);
+
+        const canResize = widget.dataset.canResize !== 'false';
+
         // Add remove functionality
         const removeBtn = widget.querySelector('[data-action="remove"]');
         removeBtn?.addEventListener('click', (e) => {
@@ -1420,10 +1625,20 @@ class InteractiveDashboard {
 
         // Add resize functionality
         const resizeBtn = widget.querySelector('[data-action="resize"]');
-        resizeBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.toggleWidgetSize(widget);
-        });
+        if (resizeBtn) {
+            if (canResize) {
+                resizeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleWidgetSize(widget);
+                });
+            } else {
+                resizeBtn.setAttribute('aria-disabled', 'true');
+                resizeBtn.classList.add('disabled');
+            }
+        }
+
+        widget.dataset.controlsBound = 'true';
+        this.updateDatasetSizing(widget);
     }
 
     removeWidget(widget) {
@@ -1437,6 +1652,7 @@ class InteractiveDashboard {
         try {
             const currentSize = widget.classList.contains('widget-large') ? 'large' : 
                               widget.classList.contains('widget-small') ? 'small' : 'medium';
+            const previousSize = widget.dataset.size || currentSize;
             
             widget.classList.remove('widget-small', 'widget-medium', 'widget-large');
             
@@ -1455,6 +1671,8 @@ class InteractiveDashboard {
             // Clear any custom size styles when toggling predefined sizes
             widget.style.width = '';
             widget.style.height = '';
+
+        this.updateDatasetSizing(widget, { previousSize });
             
             // Resize charts after size change
             setTimeout(() => {
@@ -1466,6 +1684,69 @@ class InteractiveDashboard {
                        widget.classList.contains('widget-small') ? 'small' : 'medium');
         } catch (error) {
             console.error('Error toggling widget size:', error);
+        }
+    }
+
+    updateDatasetSizing(widget, options = {}) {
+        try {
+            if (!widget) return;
+
+            const config = typeof options === 'boolean' ? { manual: options } : (options || {});
+            const { manual = false, previousSize = null } = config;
+
+            widget.classList.add('widget-base');
+
+            const canResize = widget.dataset.canResize !== 'false';
+
+            const size = widget.classList.contains('widget-large') ? 'large' :
+                widget.classList.contains('widget-small') ? 'small' : 'medium';
+            widget.dataset.size = size;
+
+            const sizeDefaults = {
+                small: { columns: 1, rows: 1 },
+                medium: { columns: 1, rows: 1 },
+                large: { columns: 2, rows: 2 }
+            };
+
+            const defaults = sizeDefaults[size] || sizeDefaults.medium;
+            const sizeChanged = Boolean(previousSize && previousSize !== size);
+
+            let columnSpan = parseInt(widget.dataset.gridColumnSpan || '', 10);
+            let rowSpan = parseInt(widget.dataset.gridRowSpan || '', 10);
+
+            if (manual && canResize) {
+                const rect = widget.getBoundingClientRect();
+                const columnThreshold = 520;
+                const rowThreshold = 360;
+
+                columnSpan = rect.width >= columnThreshold ? 2 : 1;
+                rowSpan = rect.height >= rowThreshold ? 2 : 1;
+            } else {
+                if (!Number.isInteger(columnSpan) || columnSpan < 1 || sizeChanged) {
+                    columnSpan = defaults.columns;
+                }
+
+                if (!Number.isInteger(rowSpan) || rowSpan < 1 || sizeChanged) {
+                    rowSpan = defaults.rows;
+                }
+            }
+
+            if (!canResize) {
+                columnSpan = 1;
+                rowSpan = 1;
+            }
+
+            widget.dataset.gridColumnSpan = String(columnSpan);
+            widget.dataset.gridRowSpan = String(rowSpan);
+
+            widget.style.gridColumn = '';
+            widget.style.gridRow = '';
+            widget.style.gridColumnStart = 'auto';
+            widget.style.gridColumnEnd = `span ${columnSpan}`;
+            widget.style.gridRowStart = 'auto';
+            widget.style.gridRowEnd = `span ${rowSpan}`;
+        } catch (error) {
+            console.error('Error updating dataset sizing:', error);
         }
     }
 
@@ -1622,6 +1903,12 @@ class InteractiveDashboard {
                     this.isResizing = false;
                     return;
                 }
+
+                if (this.currentResizeWidget.dataset.canResize === 'false') {
+                    this.isResizing = false;
+                    this.currentResizeWidget = null;
+                    return;
+                }
                 
                 this.currentResizeWidget.classList.add('resizing');
                 
@@ -1662,6 +1949,7 @@ class InteractiveDashboard {
             // Apply new size
             this.currentResizeWidget.style.width = `${newWidth}px`;
             this.currentResizeWidget.style.height = `${newHeight}px`;
+            this.updateDatasetSizing(this.currentResizeWidget, { manual: true });
             
             // Force chart resize if the widget contains one
             this.resizeWidgetCharts(this.currentResizeWidget);
@@ -1681,6 +1969,7 @@ class InteractiveDashboard {
                     
                     // Final chart resize
                     this.resizeWidgetCharts(this.currentResizeWidget);
+                    this.updateDatasetSizing(this.currentResizeWidget, { manual: true });
                     
                     this.saveLayoutToStorage();
                     console.log('Resize completed for widget:', this.currentResizeWidget.dataset.widgetType);
@@ -1723,19 +2012,35 @@ class InteractiveDashboard {
         try {
             if (!this.widgetsContainer) return;
             
-            const widgets = Array.from(this.widgetsContainer.querySelectorAll('.widget')).map((widget, index) => ({
-                id: widget.dataset.widgetId,
-                type: widget.dataset.widgetType,
-                size: widget.classList.contains('widget-large') ? 'large' : 
-                      widget.classList.contains('widget-small') ? 'small' : 'medium',
-                style: {
-                    width: widget.style.width || '',
-                    height: widget.style.height || ''
-                },
-                order: index // Save order for proper reordering
-            }));
+            const widgets = Array.from(this.widgetsContainer.querySelectorAll('.widget')).map((widget, index) => {
+                this.updateDatasetSizing(widget);
+                const columnSpan = parseInt(widget.dataset.gridColumnSpan ?? '', 10);
+                const rowSpan = parseInt(widget.dataset.gridRowSpan ?? '', 10);
+
+                return {
+                    id: widget.dataset.widgetId,
+                    type: widget.dataset.widgetType,
+                    size: widget.classList.contains('widget-large') ? 'large' : 
+                          widget.classList.contains('widget-small') ? 'small' : 'medium',
+                    canResize: widget.dataset.canResize !== 'false',
+                    style: {
+                        width: widget.style.width || '',
+                        height: widget.style.height || ''
+                    },
+                    grid: {
+                        columnSpan: Number.isInteger(columnSpan) && columnSpan > 0 ? columnSpan : null,
+                        rowSpan: Number.isInteger(rowSpan) && rowSpan > 0 ? rowSpan : null
+                    },
+                    order: index // Save order for proper reordering
+                };
+            });
             
-            localStorage.setItem('dashboard-layout', JSON.stringify(widgets));
+            localStorage.setItem(DASHBOARD_LAYOUT_KEY, JSON.stringify(widgets));
+            LEGACY_LAYOUT_KEYS.forEach((legacyKey) => {
+                if (legacyKey !== DASHBOARD_LAYOUT_KEY) {
+                    localStorage.removeItem(legacyKey);
+                }
+            });
             console.log('Layout saved to storage:', widgets.length, 'widgets');
         } catch (error) {
             console.error('Error saving layout to storage:', error);
@@ -1743,7 +2048,19 @@ class InteractiveDashboard {
     }
 
     loadLayoutFromStorage() {
-        const saved = localStorage.getItem('dashboard-layout');
+        let saved = localStorage.getItem(DASHBOARD_LAYOUT_KEY);
+        if (!saved) {
+            for (const legacyKey of LEGACY_LAYOUT_KEYS) {
+                const legacyValue = localStorage.getItem(legacyKey);
+                if (legacyValue) {
+                    saved = legacyValue;
+                    localStorage.setItem(DASHBOARD_LAYOUT_KEY, legacyValue);
+                    localStorage.removeItem(legacyKey);
+                    break;
+                }
+            }
+        }
+
         if (!saved) return;
         
         try {
@@ -1755,42 +2072,30 @@ class InteractiveDashboard {
             // Only add widgets that don't already exist
             layout.forEach(widgetData => {
                 if (!widgetData.id || !widgetData.type) return;
-                
-                const existing = document.querySelector(`[data-widget-id="${widgetData.id}"]`);
-                if (existing) return;
-                
+
+                const existing = this.widgetsContainer.querySelector(`[data-widget-id="${widgetData.id}"]`);
+                if (existing) {
+                    this.ensureWidgetStructure(existing);
+                    this.applyWidgetLayoutState(existing, widgetData);
+                    this.initWidget(existing);
+                    return;
+                }
+
                 const template = this.widgetTemplates[widgetData.type];
                 if (!template) {
                     console.warn('Unknown widget type:', widgetData.type);
                     return;
                 }
-                
+
                 const widgetHtml = this.generateWidgetHtml(widgetData.id, widgetData.type, template);
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = widgetHtml;
                 const newWidget = tempDiv.firstElementChild;
-                
+
                 if (!newWidget) return;
-                
-                // Apply saved size and style safely
-                newWidget.classList.remove('widget-small', 'widget-medium', 'widget-large');
-                const size = ['small', 'medium', 'large'].includes(widgetData.size) ? widgetData.size : 'medium';
-                newWidget.classList.add(`widget-${size}`);
-                
-                // Only apply custom dimensions if they're valid
-                if (widgetData.style && widgetData.style.width && widgetData.style.width !== '') {
-                    const width = parseInt(widgetData.style.width);
-                    if (!isNaN(width) && width >= 280 && width <= 800) {
-                        newWidget.style.width = widgetData.style.width;
-                    }
-                }
-                if (widgetData.style && widgetData.style.height && widgetData.style.height !== '') {
-                    const height = parseInt(widgetData.style.height);
-                    if (!isNaN(height) && height >= 180 && height <= 600) {
-                        newWidget.style.height = widgetData.style.height;
-                    }
-                }
-                
+
+                this.ensureWidgetStructure(newWidget);
+                this.applyWidgetLayoutState(newWidget, widgetData);
                 this.widgetsContainer.appendChild(newWidget);
                 this.initWidget(newWidget);
             });
@@ -1804,13 +2109,15 @@ class InteractiveDashboard {
         } catch (e) {
             console.warn('Failed to load dashboard layout:', e);
             // Clear corrupted layout
-            localStorage.removeItem('dashboard-layout');
+            localStorage.removeItem(DASHBOARD_LAYOUT_KEY);
+            LEGACY_LAYOUT_KEYS.forEach((legacyKey) => localStorage.removeItem(legacyKey));
         }
     }
 
     resetLayout() {
         if (confirm('¿Estás seguro de que quieres resetear el layout del dashboard?')) {
-            localStorage.removeItem('dashboard-layout');
+            localStorage.removeItem(DASHBOARD_LAYOUT_KEY);
+            LEGACY_LAYOUT_KEYS.forEach((legacyKey) => localStorage.removeItem(legacyKey));
             location.reload();
         }
     }
@@ -1850,6 +2157,9 @@ function bootstrap() {
         
         // Initialize interactive dashboard
         interactiveDashboard = new InteractiveDashboard();
+        if (typeof window !== 'undefined') {
+            window.interactiveDashboard = interactiveDashboard;
+        }
         console.log('✅ Interactive dashboard initialized');
         
         // Show initial section

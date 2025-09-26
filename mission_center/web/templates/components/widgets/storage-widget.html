@@ -1,5 +1,5 @@
 <!-- Storage Widget -->
-<div class="widget widget-medium" data-widget-id="storage" data-widget-type="storage" draggable="true">
+<div class="widget widget-base widget-medium" data-widget-id="storage" data-widget-type="storage" data-can-resize="true" data-grid-column-span="1" data-grid-row-span="1" draggable="true">
     <div class="widget-header">
         <h3><i data-lucide="hard-drive"></i> Almacenamiento</h3>
         <div class="widget-controls">
@@ -15,19 +15,19 @@
         <div class="metric-grid">
             <div class="metric">
                 <div class="metric-label">Lectura</div>
-                <div class="metric-value" id="disk-read">--</div>
+                <div class="metric-value" data-metric="disk-read">--</div>
             </div>
             <div class="metric">
                 <div class="metric-label">Escritura</div>
-                <div class="metric-value" id="disk-write">--</div>
+                <div class="metric-value" data-metric="disk-write">--</div>
             </div>
             <div class="metric">
                 <div class="metric-label">Dispositivos</div>
-                <div class="metric-value" id="disk-count">--</div>
+                <div class="metric-value" data-metric="disk-count">--</div>
             </div>
             <div class="metric">
                 <div class="metric-label">E/S total</div>
-                <div class="metric-value" id="io-total">--</div>
+                <div class="metric-value" data-metric="io-total">--</div>
             </div>
         </div>
         <div class="chart-container">

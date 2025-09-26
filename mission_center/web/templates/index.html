@@ -66,7 +66,7 @@ Implementation:
             <!-- Interactive Widget Grid -->
             <div class="widgets-grid" id="widgets-container">
                 <!-- CPU Widget -->
-                <div class="widget widget-medium" data-widget-id="cpu" data-widget-type="cpu" draggable="true">
+                <div class="widget widget-base widget-medium" data-widget-id="cpu" data-widget-type="cpu" data-can-resize="true" data-grid-column-span="1" data-grid-row-span="1" draggable="true">
                     <div class="widget-header">
                         <h3><i data-lucide="cpu"></i> CPU</h3>
                         <div class="widget-controls">
@@ -82,19 +82,19 @@ Implementation:
                         <div class="metric-grid">
                             <div class="metric">
                                 <div class="metric-label">Uso Total</div>
-                                <div class="metric-value" id="cpu-usage">--</div>
+                                <div class="metric-value" data-metric="cpu-usage">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">Frecuencia</div>
-                                <div class="metric-value" id="cpu-freq">--</div>
+                                <div class="metric-value" data-metric="cpu-freq">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">Núcleos Lógicos</div>
-                                <div class="metric-value" id="cpu-cores">--</div>
+                                <div class="metric-value" data-metric="cpu-cores">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">Núcleos Físicos</div>
-                                <div class="metric-value" id="cpu-physical">--</div>
+                                <div class="metric-value" data-metric="cpu-physical">--</div>
                             </div>
                         </div>
                         <div class="chart-container">
@@ -107,7 +107,7 @@ Implementation:
                 </div>
 
                 <!-- Memory Widget -->
-                <div class="widget widget-medium" data-widget-id="memory" data-widget-type="memory" draggable="true">
+                <div class="widget widget-base widget-medium" data-widget-id="memory" data-widget-type="memory" data-can-resize="true" data-grid-column-span="1" data-grid-row-span="1" draggable="true">
                     <div class="widget-header">
                         <h3><i data-lucide="memory-stick"></i> Memoria</h3>
                         <div class="widget-controls">
@@ -123,19 +123,19 @@ Implementation:
                         <div class="metric-grid">
                             <div class="metric">
                                 <div class="metric-label">RAM usada</div>
-                                <div class="metric-value" id="mem-usage">--</div>
+                                <div class="metric-value" data-metric="mem-usage">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">RAM total</div>
-                                <div class="metric-value" id="mem-total">--</div>
+                                <div class="metric-value" data-metric="mem-total">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">Swap usada</div>
-                                <div class="metric-value" id="swap-usage">--</div>
+                                <div class="metric-value" data-metric="swap-usage">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">Swap total</div>
-                                <div class="metric-value" id="swap-total">--</div>
+                                <div class="metric-value" data-metric="swap-total">--</div>
                             </div>
                         </div>
                         <div class="chart-container">
@@ -148,7 +148,7 @@ Implementation:
                 </div>
 
                 <!-- Storage Widget -->
-                <div class="widget widget-medium" data-widget-id="storage" data-widget-type="storage" draggable="true">
+                <div class="widget widget-base widget-medium" data-widget-id="storage" data-widget-type="storage" data-can-resize="true" data-grid-column-span="1" data-grid-row-span="1" draggable="true">
                     <div class="widget-header">
                         <h3><i data-lucide="hard-drive"></i> Almacenamiento</h3>
                         <div class="widget-controls">
@@ -164,19 +164,19 @@ Implementation:
                         <div class="metric-grid">
                             <div class="metric">
                                 <div class="metric-label">Lectura</div>
-                                <div class="metric-value" id="disk-read">--</div>
+                                <div class="metric-value" data-metric="disk-read">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">Escritura</div>
-                                <div class="metric-value" id="disk-write">--</div>
+                                <div class="metric-value" data-metric="disk-write">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">Dispositivos</div>
-                                <div class="metric-value" id="disk-count">--</div>
+                                <div class="metric-value" data-metric="disk-count">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">E/S total</div>
-                                <div class="metric-value" id="io-total">--</div>
+                                <div class="metric-value" data-metric="io-total">--</div>
                             </div>
                         </div>
                         <div class="chart-container">
@@ -189,7 +189,7 @@ Implementation:
                 </div>
 
                 <!-- Network Widget -->
-                <div class="widget widget-medium" data-widget-id="network" data-widget-type="network" draggable="true">
+                <div class="widget widget-base widget-medium" data-widget-id="network" data-widget-type="network" data-can-resize="true" data-grid-column-span="1" data-grid-row-span="1" draggable="true">
                     <div class="widget-header">
                         <h3><i data-lucide="network"></i> Red</h3>
                         <div class="widget-controls">
@@ -205,19 +205,19 @@ Implementation:
                         <div class="metric-grid">
                             <div class="metric">
                                 <div class="metric-label">Subida</div>
-                                <div class="metric-value" id="net-sent">--</div>
+                                <div class="metric-value" data-metric="net-sent">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">Bajada</div>
-                                <div class="metric-value" id="net-recv">--</div>
+                                <div class="metric-value" data-metric="net-recv">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">Interfaces</div>
-                                <div class="metric-value" id="net-interfaces">--</div>
+                                <div class="metric-value" data-metric="net-interfaces">--</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-label">GPUs</div>
-                                <div class="metric-value" id="gpu-count">--</div>
+                                <div class="metric-value" data-metric="gpu-count">--</div>
                             </div>
                         </div>
                         <div class="chart-container">

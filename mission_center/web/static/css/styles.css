@@ -477,6 +477,13 @@ body {
     overflow: hidden;
     transition: all var(--transition);
     cursor: grab;
+
+.widget-btn.disabled,
+.widget-btn[aria-disabled="true"] {
+    pointer-events: none;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 }
 
 .widget:hover {
