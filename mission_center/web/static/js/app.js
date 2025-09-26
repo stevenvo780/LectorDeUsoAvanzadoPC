@@ -1253,6 +1253,7 @@ class InteractiveDashboard {
         this.placeholder = document.createElement('div');
         this.placeholder.className = 'widget-placeholder';
         this.placeholder.setAttribute('aria-hidden', 'true');
+        this.lastResizeDimensions = null;
 
         // Widget templates
         this.widgetTemplates = {
@@ -1410,7 +1411,7 @@ class InteractiveDashboard {
             widget.dataset.gridRowSpan = String(rowSpan);
         }
 
-    this.updateDatasetSizing(widget);
+        this.updateDatasetSizing(widget);
     }
 
     initEventListeners() {
@@ -1692,35 +1693,42 @@ class InteractiveDashboard {
             if (!widget) return;
 
             const config = typeof options === 'boolean' ? { manual: options } : (options || {});
-            const { manual = false, previousSize = null } = config;
+            const {
+                manual = false,
+                previousSize = null,
+                dimensions = null,
+                columnThreshold = 520,
+                rowThreshold = 360
+            } = config;
 
             widget.classList.add('widget-base');
 
             const canResize = widget.dataset.canResize !== 'false';
-
-            const size = widget.classList.contains('widget-large') ? 'large' :
+            let size = widget.classList.contains('widget-large') ? 'large' :
                 widget.classList.contains('widget-small') ? 'small' : 'medium';
-            widget.dataset.size = size;
 
             const sizeDefaults = {
                 small: { columns: 1, rows: 1 },
                 medium: { columns: 1, rows: 1 },
                 large: { columns: 2, rows: 2 }
             };
-
-            const defaults = sizeDefaults[size] || sizeDefaults.medium;
+            let defaults = sizeDefaults[size] || sizeDefaults.medium;
             const sizeChanged = Boolean(previousSize && previousSize !== size);
 
             let columnSpan = parseInt(widget.dataset.gridColumnSpan || '', 10);
             let rowSpan = parseInt(widget.dataset.gridRowSpan || '', 10);
 
             if (manual && canResize) {
-                const rect = widget.getBoundingClientRect();
-                const columnThreshold = 520;
-                const rowThreshold = 360;
+                const measuredWidth = dimensions?.width ?? widget.getBoundingClientRect().width;
+                const measuredHeight = dimensions?.height ?? widget.getBoundingClientRect().height;
 
-                columnSpan = rect.width >= columnThreshold ? 2 : 1;
-                rowSpan = rect.height >= rowThreshold ? 2 : 1;
+                columnSpan = measuredWidth >= columnThreshold ? 2 : 1;
+                rowSpan = measuredHeight >= rowThreshold ? 2 : 1;
+
+                size = columnSpan > 1 || rowSpan > 1 ? 'large' : (size === 'small' ? 'small' : 'medium');
+                widget.classList.remove('widget-small', 'widget-medium', 'widget-large');
+                widget.classList.add(`widget-${size}`);
+                defaults = sizeDefaults[size] || sizeDefaults.medium;
             } else {
                 if (!Number.isInteger(columnSpan) || columnSpan < 1 || sizeChanged) {
                     columnSpan = defaults.columns;
@@ -1735,6 +1743,8 @@ class InteractiveDashboard {
                 columnSpan = 1;
                 rowSpan = 1;
             }
+
+            widget.dataset.size = size;
 
             widget.dataset.gridColumnSpan = String(columnSpan);
             widget.dataset.gridRowSpan = String(rowSpan);
@@ -1945,11 +1955,12 @@ class InteractiveDashboard {
             
             const newWidth = Math.max(minWidth, Math.min(maxWidth, this.resizeStartWidth + deltaX));
             const newHeight = Math.max(minHeight, Math.min(maxHeight, this.resizeStartHeight + deltaY));
+            this.lastResizeDimensions = { width: newWidth, height: newHeight };
             
             // Apply new size
             this.currentResizeWidget.style.width = `${newWidth}px`;
             this.currentResizeWidget.style.height = `${newHeight}px`;
-            this.updateDatasetSizing(this.currentResizeWidget, { manual: true });
+            this.updateDatasetSizing(this.currentResizeWidget, { manual: true, dimensions: this.lastResizeDimensions });
             
             // Force chart resize if the widget contains one
             this.resizeWidgetCharts(this.currentResizeWidget);
@@ -1967,9 +1978,21 @@ class InteractiveDashboard {
                 if (this.currentResizeWidget) {
                     this.currentResizeWidget.classList.remove('resizing');
                     
+                    const finalDimensions = this.lastResizeDimensions || {
+                        width: this.currentResizeWidget.getBoundingClientRect().width,
+                        height: this.currentResizeWidget.getBoundingClientRect().height
+                    };
+
+                    this.updateDatasetSizing(this.currentResizeWidget, {
+                        manual: true,
+                        dimensions: finalDimensions
+                    });
+
+                    this.currentResizeWidget.style.width = '';
+                    this.currentResizeWidget.style.height = '';
+
                     // Final chart resize
                     this.resizeWidgetCharts(this.currentResizeWidget);
-                    this.updateDatasetSizing(this.currentResizeWidget, { manual: true });
                     
                     this.saveLayoutToStorage();
                     console.log('Resize completed for widget:', this.currentResizeWidget.dataset.widgetType);
@@ -1981,6 +2004,7 @@ class InteractiveDashboard {
                 this.resizeStartY = null;
                 this.resizeStartWidth = null;
                 this.resizeStartHeight = null;
+                this.lastResizeDimensions = null;
             }
         } catch (error) {
             console.error('Error in handleMouseUp:', error);
