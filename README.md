@@ -63,7 +63,9 @@ mission_center/
       index.html      # Shell de la SPA
     static/
       css/styles.css  # Tema Fluent dark
-      js/app.js       # Lógica de la interfaz (Chart.js, navegación, renders)
+      js/app.js       # Orquestador principal de la interfaz (Chart.js, navegación)
+      js/api.js       # Cliente ligero para `/api/current` y `/api/history`
+      js/utils.js     # Conversión de unidades y utilidades de formato reutilizables
 requirements.txt      # Solo psutil (dependencias opcionales documentadas en el código)
 ```
 
@@ -81,6 +83,11 @@ El servidor se basa en `http.server` y expone:
   ```bash
   pip install pynvml pyudev
   ```
+- El servidor web expone controles de seguridad básicos configurables en `mission_center/core/config.py`:
+  - **CORS** con lista blanca de orígenes (`SECURITY.allowed_origins`).
+  - **Autenticación HTTP Basic** opcional (usuario y contraseña).
+  - **Rate limiting** simple por IP (ventana y número máximo de solicitudes).
+  Ajusta estos valores antes de desplegar en redes compartidas.
 
 ## 📐 Diseño UI
 
@@ -98,6 +105,8 @@ python -m compileall mission_center
 ```
 
 para validar la sintaxis de los módulos.
+
+> ℹ️ Los chequeos de permisos del sistema ahora se ejecutan de forma diferida en segundo plano y se cachean durante varios minutos, reduciendo la latencia de arranque. El muestreo de procesos también se limita a un intervalo mínimo de 2 s para evitar carga innecesaria en hosts con cientos de procesos.
 
 ## 📄 Nota histórica
 

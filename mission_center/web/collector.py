@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import asdict
+import logging
 import os
 import threading
 import time
@@ -43,6 +44,7 @@ from mission_center.models import (
 
 
 _PRIMITIVE_TYPES = (int, float, str, bool)
+logger = logging.getLogger(__name__)
 
 
 def _snapshot_to_dict(snapshot: Any) -> Any:
@@ -91,9 +93,30 @@ class DataCollector:
         )
 
         self.current_data: dict[str, Any] = {}
-        
-        # Estado de permisos del sistema
-        self.permission_status: dict[str, Any] = self._check_system_permissions()
+
+        # Estado de permisos del sistema (se refresca de forma diferida)
+        self.permission_status: dict[str, Any] = {
+            "permission_level": "pending",
+            "warnings": ["Determinando permisos del sistema"],
+            "has_root": False,
+            "accessible_paths": {},
+            "access_percentage": 0,
+            "is_container": False,
+        }
+        self._permission_refresh_interval = 180.0
+        self._last_permission_refresh = 0.0
+        self._permissions_thread: threading.Thread | None = None
+
+        self._diagnostics: dict[str, Any] = {
+            "last_run_started": None,
+            "last_run_duration": 0.0,
+            "last_success_at": None,
+            "consecutive_failures": 0,
+            "last_error": None,
+            "provider_failures": {},
+            "last_permission_refresh": None,
+        }
+        self._provider_failures: defaultdict[str, int] = defaultdict(int)
 
         self._providers: dict[str, Callable[[], Any]] = {
             "cpu": collect_cpu_snapshot,
@@ -208,6 +231,7 @@ class DataCollector:
         self._stop.clear()
         self._thread = threading.Thread(target=self._run, name="DataCollector", daemon=True)
         self._thread.start()
+        self._schedule_permission_refresh()
 
     def stop(self, timeout: float | None = None) -> None:
         self._stop.set()
@@ -220,6 +244,10 @@ class DataCollector:
         with self._lock:
             data = _snapshot_to_dict(self.current_data)
             data["permissions"] = self.permission_status
+            data["diagnostics"] = {
+                **self._diagnostics,
+                "provider_failures": dict(self._provider_failures),
+            }
             return data
 
     def history(self) -> dict[str, Any]:
@@ -241,9 +269,14 @@ class DataCollector:
             start_time = time.perf_counter()
             try:
                 self._collect_all()
-            except Exception:  # pragma: no cover - defensive guard for runtime collectors
-                # We keep the collector alive even if a provider fails.
-                pass
+            except Exception as exc:  # pragma: no cover - defensive guard for runtime collectors
+                logger.exception("Error inesperado durante la recolección de métricas", exc_info=exc)
+                self._update_diagnostics(success=False, duration=time.perf_counter() - start_time, error=exc)
+            else:
+                self._update_diagnostics(success=True, duration=time.perf_counter() - start_time)
+            finally:
+                if (time.time() - self._last_permission_refresh) > self._permission_refresh_interval:
+                    self._schedule_permission_refresh()
             elapsed = time.perf_counter() - start_time
             delay = max(0.1, self._interval - elapsed)
             self._stop.wait(delay)
@@ -368,13 +401,68 @@ class DataCollector:
     def _safe_call(self, key: str, fn: Callable[[], Any], expected_type: type[Any] | tuple[type[Any], ...]) -> Any:
         try:
             result = fn()
-        except Exception:
+        except Exception as exc:
+            logger.exception("Proveedor '%s' falló durante la recolección", key, exc_info=exc)
+            with self._lock:
+                self._provider_failures[key] += 1
+                self._diagnostics["last_error"] = {
+                    "provider": key,
+                    "message": str(exc),
+                    "type": exc.__class__.__name__,
+                    "timestamp": time.time(),
+                }
+                self._diagnostics["provider_failures"] = dict(self._provider_failures)
             return None
         if expected_type is list and isinstance(result, list):
             return result
         if isinstance(result, expected_type):
             return result
         return None
+
+    def _update_diagnostics(self, *, success: bool, duration: float, error: Exception | None = None) -> None:
+        now = time.time()
+        with self._lock:
+            self._diagnostics["last_run_started"] = now - duration
+            self._diagnostics["last_run_duration"] = duration
+            if success:
+                self._diagnostics["last_success_at"] = now
+                self._diagnostics["consecutive_failures"] = 0
+                if error is None:
+                    self._diagnostics.setdefault("last_error", None)
+            else:
+                self._diagnostics["consecutive_failures"] = self._diagnostics.get("consecutive_failures", 0) + 1
+                self._diagnostics["last_error"] = {
+                    "message": str(error) if error else "unknown",
+                    "type": error.__class__.__name__ if error else "UnknownException",
+                    "timestamp": now,
+                }
+            self._diagnostics["last_permission_refresh"] = self._last_permission_refresh or None
+
+    def _schedule_permission_refresh(self) -> None:
+        if self._permissions_thread and self._permissions_thread.is_alive():
+            return
+
+        def _refresh() -> None:
+            try:
+                status = self._check_system_permissions()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logger.exception("Error evaluando permisos del sistema", exc_info=exc)
+                status = {
+                    "permission_level": "limited",
+                    "warnings": [f"Error al evaluar permisos: {exc}"],
+                    "has_root": False,
+                    "accessible_paths": {},
+                    "access_percentage": 0,
+                    "is_container": False,
+                }
+            with self._lock:
+                self.permission_status = status
+                self._last_permission_refresh = time.time()
+                self._diagnostics["last_permission_refresh"] = self._last_permission_refresh
+
+        thread = threading.Thread(target=_refresh, name="PermissionProbe", daemon=True)
+        self._permissions_thread = thread
+        thread.start()
 
 
 collector = DataCollector()

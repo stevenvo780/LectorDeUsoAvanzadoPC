@@ -1,4 +1,5 @@
-
+import { fetchDashboardData } from "./api.js";
+import { formatBytes, formatNumber, formatFrequency, formatDuration } from "./utils.js";
 
 const charts = {};
 const miniCharts = new Map();
@@ -53,29 +54,6 @@ function updateMetric(metricId, value) {
     updateElements(nodes, (node) => {
         node.textContent = value;
     });
-}
-
-function formatBytes(value) {
-    if (!value && value !== 0) return "--";
-    const units = ["B", "KB", "MB", "GB", "TB", "PB"];
-    let size = Math.abs(value);
-    let unit = 0;
-    while (size >= 1024 && unit < units.length - 1) {
-        size /= 1024;
-        unit += 1;
-    }
-    const sign = value < 0 ? "-" : "";
-    return `${sign}${size.toFixed(size >= 100 ? 0 : 1)} ${units[unit]}`;
-}
-
-function formatNumber(value) {
-    if (value === null || value === undefined) return "--";
-    return Number(value).toLocaleString();
-}
-
-function formatFrequency(value) {
-    if (!value && value !== 0) return "--";
-    return `${value.toFixed(0)} MHz`;
 }
 
 function initNavigation() {
@@ -791,53 +769,6 @@ function updateSystemInfo(data) {
     });
 }
 
-function formatDuration(seconds) {
-    if (seconds === null || seconds === undefined || Number.isNaN(seconds)) {
-        return "--";
-    }
-    const total = Math.max(0, Math.floor(Number(seconds)));
-    const hours = Math.floor(total / 3600);
-    const minutes = Math.floor((total % 3600) / 60);
-    const secs = total % 60;
-    return `${hours.toString().padStart(2, "0")}h ${minutes.toString().padStart(2, "0")}m ${secs
-        .toString()
-        .padStart(2, "0")}s`;
-}
-
-async function fetchJSON(url, timeout = 5000) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
-    try {
-        const response = await fetch(url, { 
-            cache: "no-store",
-            signal: controller.signal,
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        });
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON');
-        }
-        
-        return await response.json();
-    } catch (error) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            throw new Error('Request timeout');
-        }
-        throw error;
-    }
-}
-
 let updateLoopRetryCount = 0;
 let updateLoopRunning = false;
 const MAX_RETRY_COUNT = 5;
@@ -848,10 +779,7 @@ async function updateLoop() {
     updateLoopRunning = true;
     
     try {
-        const [current, history] = await Promise.all([
-            fetchJSON("/api/current"),
-            fetchJSON("/api/history"),
-        ]);
+        const [current, history] = await fetchDashboardData();
         
         // Reset retry count on successful fetch
         updateLoopRetryCount = 0;

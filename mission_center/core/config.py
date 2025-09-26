@@ -24,8 +24,22 @@ class HistoryConfig:
     long_window: int = 1800
 
 
+@dataclass(frozen=True)
+class SecurityConfig:
+    """Security-related defaults for the Mission Center web server."""
+
+    allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8080", "http://localhost:8080")
+    allow_credentials: bool = False
+    basic_auth_username: str | None = None
+    basic_auth_password: str | None = None
+    enable_rate_limit: bool = True
+    rate_limit_requests: int = 120
+    rate_limit_window_seconds: int = 60
+
+
 APP_NAME = "Mission Center"
 APP_ID = "com.example.mission_center"
 DATA_DIR = Path.home() / ".mission_center"
 CONFIG = UpdateIntervals()
 HISTORY = HistoryConfig()
+SECURITY = SecurityConfig()

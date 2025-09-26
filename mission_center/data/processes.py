@@ -22,6 +22,9 @@ _PROCESS_ATTRS = [
     "io_counters",
 ]
 
+_PROCESS_SAMPLE_INTERVAL = 2.0
+_LAST_SNAPSHOT: tuple[float, ProcessSnapshot] | None = None
+
 
 def _safe_cmdline(cmdline: Iterable[str] | None) -> tuple[str, ...]:
     if not cmdline:
@@ -30,7 +33,12 @@ def _safe_cmdline(cmdline: Iterable[str] | None) -> tuple[str, ...]:
 
 
 def collect_process_snapshot() -> ProcessSnapshot:
+    global _LAST_SNAPSHOT
     timestamp = time.time()
+    if _LAST_SNAPSHOT:
+        last_time, cached_snapshot = _LAST_SNAPSHOT
+        if (timestamp - last_time) < _PROCESS_SAMPLE_INTERVAL:
+            return cached_snapshot
     processes: list[ProcessInfo] = []
     total_cpu = 0.0
     total_mem = 0
@@ -64,9 +72,12 @@ def collect_process_snapshot() -> ProcessSnapshot:
             continue
 
     processes.sort(key=lambda p: (p.cpu_percent, p.memory_bytes), reverse=True)
-    return ProcessSnapshot(
+    snapshot = ProcessSnapshot(
         timestamp=timestamp,
         processes=processes,
         total_cpu_percent=total_cpu,
         total_memory_bytes=total_mem,
     )
+
+    _LAST_SNAPSHOT = (timestamp, snapshot)
+    return snapshot
